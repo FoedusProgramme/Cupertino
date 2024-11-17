@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/apple"
+    tools:context=".MainActivity">
+
+    <!--
+    <uk.akane.cupertinodemo.CupertinoCustomView
+        android:id="@+id/ccv"
+        android:layout_width="128dp"
+        android:layout_height="128dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/img"
+        android:layout_marginBottom="16dp"
+        />
+
+
+    <ImageView
+        android:id="@+id/img"
+        android:layout_width="128dp"
+        android:layout_height="128dp"
+        android:src="@drawable/apple"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+        -->
+
+    <!--
+
+    <FrameLayout
+        android:id="@+id/titlebar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="128dp"
+            android:gravity="bottom"
+            android:text="设置"
+            android:textFontWeight="600"
+            android:fontFamily="sans-serif"
+            android:layout_gravity="bottom"
+            android:textSize="32sp"
+            android:textColor="@color/color_on_surface"
+            />
+
+    </FrameLayout>
+    -->
+
+    <!--
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="#E3E3E8"
+        app:strokeWidth="0dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:layout_constraintTop_toBottomOf="@id/frame">
+
+        <ImageView
+            android:id="@+id/search"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_search"
+            android:layout_marginStart="6dp"
+            app:tint="#7A7A80"
+            android:layout_gravity="center_vertical"
+            />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="搜索"
+            android:layout_gravity="center_vertical"
+            android:textSize="16sp"
+            android:includeFontPadding="false"
+            android:layout_marginStart="32dp"
+            android:textColor="#7A7A80"
+            />
+
+    </com.google.android.material.card.MaterialCardView>
+    -->
+
+    <!--
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:clipToOutline="false"
+        />
+
+    <uk.akane.cupertinodemo.CupertinoCustomView
+        android:id="@+id/ccv"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/custom_view_height"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp"
+        />
+        -->
+
+    <uk.akane.cupertino.widget.OverlayTextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        android:textSize="64sp"
+        android:layout_gravity="center"
+        app:textViewLayer="secondary"
+        />
+
+</FrameLayout>

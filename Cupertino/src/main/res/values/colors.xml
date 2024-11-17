@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="light_elevated_container">#F2F2F7</color>
+    <color name="light_elevated_container_child">#FFFFFF</color>
+
+    <color name="color_on_surface">#000000</color>
+
+    <color name="batt_bg">#34C759</color>
+
+
+    <color name="primaryOverlayShadeColor">#73FFFFFF</color>
+    <color name="primaryOverlayColor">#BFFFFFFF</color>
+
+    <color name="secondaryOverlayShadeColor">#33FFFFFF</color>
+    <color name="secondaryOverlayColor">#26FFFFFF</color>
+
+    <color name="tertiaryOverlayShadeColor">#1AFFFFFF</color>
+    <color name="tertiaryOverlayColor">#0DFFFFFF</color>
+
+</resources>
