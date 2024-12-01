@@ -47,21 +47,13 @@ class OverlayTextView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         Log.d(TAG, "onDraw")
 
-        val overlayLayer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-
         paint.blendMode = BlendMode.OVERLAY
         textColorField.set(this, getOverlayLayerColor())
         super.onDraw(canvas)
 
-        canvas.restoreToCount(overlayLayer)
-
-        val shadeLayer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-
         paint.blendMode = null
         textColorField.set(this, getShadeLayerColor())
         super.onDraw(canvas)
-
-        canvas.restoreToCount(shadeLayer)
     }
 
     private fun getOverlayLayerColor(): Int {
@@ -70,6 +62,7 @@ class OverlayTextView @JvmOverloads constructor(
                 0 -> R.color.primaryOverlayColor
                 1 -> R.color.secondaryOverlayColor
                 2 -> R.color.tertiaryOverlayColor
+                3 -> R.color.standardOverlayColor
                 else -> throw IllegalArgumentException("Invalid textViewLayer value")
             },
             null
@@ -82,6 +75,7 @@ class OverlayTextView @JvmOverloads constructor(
                 0 -> R.color.primaryOverlayShadeColor
                 1 -> R.color.secondaryOverlayShadeColor
                 2 -> R.color.tertiaryOverlayShadeColor
+                3 -> R.color.standardOverlayShadeColor
                 else -> throw IllegalArgumentException("Invalid textViewLayer value")
             },
             null

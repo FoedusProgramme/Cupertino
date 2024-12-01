@@ -10,6 +10,8 @@
 
     <color name="batt_bg">#34C759</color>
 
+    <color name="standardOverlayShadeColor">#D9FFFFFF</color>
+    <color name="standardOverlayColor">#FFFFFF</color>
 
     <color name="primaryOverlayShadeColor">#73FFFFFF</color>
     <color name="primaryOverlayColor">#BFFFFFFF</color>
