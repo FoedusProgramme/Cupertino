@@ -29,10 +29,10 @@ class OverlayDivider @JvmOverloads constructor(
     }
 
     @Px
-    private val rectWidth = 42.dpToPx(context)
+    private val rectWidth = 36.dpToPx(context)
 
     @Px
-    private val rectHeight = 6.dpToPx(context)
+    private val rectHeight = 5.dpToPx(context)
 
     @Px
     private val cornerRadius = 3.dpToPx(context)
@@ -59,5 +59,6 @@ class OverlayDivider @JvmOverloads constructor(
         val bottom = centerY + rectHeight / 2
 
         canvas.drawRoundRect(left, top, right, bottom, cornerRadius.toFloat(), cornerRadius.toFloat(), paint)
+        canvas.drawRoundRect(left, top, right, bottom, cornerRadius.toFloat(), cornerRadius.toFloat(), shadePaint)
     }
 }

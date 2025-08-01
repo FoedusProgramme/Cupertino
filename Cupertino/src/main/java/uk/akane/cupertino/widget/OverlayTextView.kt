@@ -42,6 +42,8 @@ class OverlayTextView @JvmOverloads constructor(
         textColorField = (HiddenApiBypass.getInstanceFields(TextView::class.java)
             .find { (it as Field).name == "mCurTextColor" } ?: throw NoSuchFieldException("Field 'mCurTextColor' not found")) as Field
         textColorField.isAccessible = true
+
+        isSingleLine = true
     }
 
     override fun onDraw(canvas: Canvas) {
