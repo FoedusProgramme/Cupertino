@@ -8,4 +8,16 @@
             <enum name="standard" value="3" />
         </attr>
     </declare-styleable>
+
+    <declare-styleable name="OverlayButton">
+        <attr name="viewLayer" format="enum">
+            <enum name="primary" value="0" />
+            <enum name="secondary" value="1" />
+            <enum name="tertiary" value="2" />
+            <enum name="standard" value="3" />
+        </attr>
+        <attr name="icon" format="reference" />
+        <attr name="iconSize" format="dimension" />
+    </declare-styleable>
+
 </resources>
