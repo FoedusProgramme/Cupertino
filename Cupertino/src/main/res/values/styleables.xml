@@ -20,4 +20,7 @@
         <attr name="iconSize" format="dimension" />
     </declare-styleable>
 
+    <declare-styleable name="OverlaySlider">
+        <attr name="momentum" format="boolean" />
+    </declare-styleable>
 </resources>

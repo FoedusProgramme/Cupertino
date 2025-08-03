@@ -1,5 +1,6 @@
 package uk.akane.cupertino.widget
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlendMode
@@ -10,8 +11,11 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.PorterDuffXfermode
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.widget.Checkable
+import androidx.core.animation.doOnEnd
+import androidx.core.animation.doOnStart
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
 
@@ -34,7 +38,15 @@ class OverlayButton @JvmOverloads constructor(
     private val bitmap: Bitmap
     private val bitmapCanvas: Canvas
 
-    val paint = Paint().apply {
+    private val transformBitmap: Bitmap
+    private val transformCanvas: Canvas
+
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        isAntiAlias = true
+        isFilterBitmap = true
+    }
+
+    val transformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         isAntiAlias = true
         isFilterBitmap = true
     }
@@ -53,10 +65,15 @@ class OverlayButton @JvmOverloads constructor(
         bitmap = createBitmap(iconSize, iconSize)
         bitmapCanvas = Canvas(bitmap)
 
+        transformBitmap = createBitmap(iconSize, iconSize)
+        transformCanvas = Canvas(transformBitmap)
+
         iconDrawable?.callback = this
     }
 
     fun Drawable.toBitmap(): Bitmap {
+        transformCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
+        transformCanvas.drawBitmap(bitmap, 0F, 0F, null)
         bitmapCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
         this.setBounds(0, 0, iconSize, iconSize)
         this.draw(bitmapCanvas)
@@ -66,6 +83,8 @@ class OverlayButton @JvmOverloads constructor(
     private val overlayColorFilter = PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
     private val shadeColorFilter = PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
 
+    private var isTransform = false
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -73,6 +92,20 @@ class OverlayButton @JvmOverloads constructor(
         val left = (width - size) / 2
         val top = (height - size) / 2
 
+        if (isTransform) {
+            drawIcon(transformPaint, canvas, transformBitmap, left, top)
+        }
+
+        drawIcon(paint, canvas, bitmap, left, top)
+    }
+
+    private fun drawIcon(
+        paint: Paint,
+        canvas: Canvas,
+        bitmap: Bitmap,
+        left: Int,
+        top: Int
+    ) {
         paint.colorFilter = overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
         canvas.drawBitmap(bitmap, left.toFloat(), top.toFloat(), paint)
@@ -86,20 +119,58 @@ class OverlayButton @JvmOverloads constructor(
         super.drawableStateChanged()
         iconDrawable?.state = drawableState
         iconDrawable!!.toBitmap()
-        invalidate()
     }
 
     override fun setChecked(checked: Boolean) {
         if (isChecked != checked) {
             isChecked = checked
             refreshDrawableState()
+            animateChecked()
+        }
+    }
+
+    private var transformValueAnimator: ValueAnimator? = null
+
+    private fun animateChecked() {
+        transformValueAnimator?.cancel()
+        transformValueAnimator = null
+        isTransform = false
+
+        ValueAnimator.ofFloat(
+            0F,
+            1F
+        ).apply {
+            transformValueAnimator = this
+            interpolator = AnimationUtils.easingInterpolator
+            duration = 200L
+
+            doOnStart {
+                isTransform = true
+            }
+
+            doOnEnd {
+                isTransform = false
+                transformValueAnimator = null
+            }
+
+            addUpdateListener {
+                val animatedAlpha = animatedValue as Float
+                transformPaint.alpha = (255 * (1F - animatedAlpha)).toInt()
+                paint.alpha = (255 * animatedAlpha).toInt()
+                Log.d("TAG", "tp: ${transformPaint.alpha}, p: ${paint.alpha}")
+                invalidate()
+            }
+
+            start()
         }
     }
 
     override fun isChecked(): Boolean = isChecked
 
     override fun toggle() {
+        Log.d("TAG", "toggle!")
         isChecked = !isChecked
+        animateChecked()
     }
 
     override fun onCreateDrawableState(extraSpace: Int): IntArray {
