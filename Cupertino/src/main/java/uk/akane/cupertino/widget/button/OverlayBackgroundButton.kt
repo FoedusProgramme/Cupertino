@@ -11,11 +11,16 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.util.Log
 import android.widget.Checkable
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.base.ShrinkableView
 import uk.akane.cupertino.widget.dpToPx
+import uk.akane.cupertino.widget.getOverlayLayerColor
+import uk.akane.cupertino.widget.getShadeLayerColor
+import uk.akane.cupertino.widget.utils.AnimationUtils
 
 class OverlayBackgroundButton @JvmOverloads constructor(
     context: Context,
@@ -31,11 +36,12 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
     val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val drawableColorFilter =
-        PorterDuffColorFilter(getHollowStarColor(), PorterDuff.Mode.SRC_IN)
-    private val drawablePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        colorFilter = drawableColorFilter
-    }
+    private val drawablePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val overlayColorFilter =
+        PorterDuffColorFilter(resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN)
+    private val shadeColorFilter =
+        PorterDuffColorFilter(resources.getOverlayLayerColor(3), PorterDuff.Mode.SRC_IN)
 
     init {
         isClickable = true
@@ -58,23 +64,25 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         return drawableBitmap
     }
 
+    private var transformFactor: Float = 0F
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        drawBackground(canvas, backgroundPaint)
-        drawDrawable(canvas, drawablePaint)
+        drawBackground(canvas, backgroundPaint, transformFactor)
+        drawDrawable(canvas, drawablePaint, transformFactor)
     }
 
-    private fun drawBackground(canvas: Canvas, paint: Paint) {
-        paint.color = getBackgroundOverlayLayerColor()
+    private fun drawBackground(canvas: Canvas, paint: Paint, factor: Float) {
+        paint.color = resources.getOverlayLayerColor(2)
         paint.blendMode = BlendMode.OVERLAY
         canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
 
-        paint.color = getBackgroundShadeLayerColor()
+        paint.color = ColorUtils.setAlphaComponent(resources.getShadeLayerColor(2), (4 + 20 * (1F - factor)).toInt())
         paint.blendMode = null
         canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
     }
 
-    private fun drawDrawable(canvas: Canvas, paint: Paint) {
+    private fun drawDrawable(canvas: Canvas, paint: Paint, factor: Float) {
         val bitmap = drawableBitmap
 
         val centerX = width / 2f
@@ -86,6 +94,20 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         val left = centerX - drawWidth / 2f
         val top = centerY - drawHeight / 2f
 
+        paint.colorFilter = overlayColorFilter
+        paint.blendMode = BlendMode.OVERLAY
+        paint.alpha = (255 * ((1F - factor) * 0.25F + 0.75F)).toInt()
+        canvas.drawBitmap(
+            bitmap,
+            null,
+            RectF(left, top, left + drawWidth, top + drawHeight),
+            paint
+        )
+
+        paint.colorFilter = shadeColorFilter
+        paint.blendMode = null
+        paint.alpha = (255 * ((1F - factor) * 0.55F + 0.45F)).toInt()
+        Log.d("TAG", "alpa: ${paint.alpha}")
         canvas.drawBitmap(
             bitmap,
             null,
@@ -102,6 +124,29 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         }
     }
 
+    private var valueAnimator: ValueAnimator? = null
+
+    private fun animateChecked(checked: Boolean) {
+        valueAnimator?.cancel()
+        valueAnimator = null
+
+        ValueAnimator.ofFloat(
+            if (checked) 0F else 1F,
+            if (checked) 1F else 0F
+        ).apply {
+            valueAnimator = this
+            duration = 300L
+            interpolator = AnimationUtils.easingInterpolator
+
+            addUpdateListener {
+                transformFactor = animatedValue as Float
+                invalidate()
+            }
+
+            start()
+        }
+    }
+
     override fun setChecked(checked: Boolean) {
         if (isChecked != checked) {
             isChecked = checked
@@ -110,25 +155,15 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
     override fun toggle() {
         isChecked = !isChecked
+        animateChecked(isChecked)
     }
 
     override fun isChecked(): Boolean = isChecked
 
-    private fun getBackgroundOverlayLayerColor(): Int =
-        resources.getColor(
-            R.color.tertiaryOverlayColor,
-            null
-        )
-
-    private fun getBackgroundShadeLayerColor(): Int =
-        resources.getColor(
-            R.color.tertiaryOverlayShadeColor,
-            null
-        )
-
-    private fun getHollowStarColor(): Int =
+    private fun getDrawableColor(): Int =
         resources.getColor(
             R.color.white,
             null
         )
+
 }

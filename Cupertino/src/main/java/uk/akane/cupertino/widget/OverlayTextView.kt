@@ -40,7 +40,7 @@ class OverlayTextView @JvmOverloads constructor(
         }
 
         textColorField = (HiddenApiBypass.getInstanceFields(TextView::class.java)
-            .find { (it as Field).name == "mCurTextColor" } ?: throw NoSuchFieldException("Field 'mCurTextColor' not found")) as Field
+            .find { (it as Field).name == "mCurTextColor" } ?: throw NoSuchFieldException("Field 'mCurTextColor' not found"))
         textColorField.isAccessible = true
 
         isSingleLine = true
@@ -50,38 +50,12 @@ class OverlayTextView @JvmOverloads constructor(
         Log.d(TAG, "onDraw")
 
         paint.blendMode = BlendMode.OVERLAY
-        textColorField.set(this, getOverlayLayerColor())
+        textColorField.set(this, resources.getOverlayLayerColor(textViewLayer))
         super.onDraw(canvas)
 
         paint.blendMode = null
-        textColorField.set(this, getShadeLayerColor())
+        textColorField.set(this, resources.getShadeLayerColor(textViewLayer))
         super.onDraw(canvas)
-    }
-
-    private fun getOverlayLayerColor(): Int {
-        return resources.getColor(
-            when (textViewLayer) {
-                0 -> R.color.primaryOverlayColor
-                1 -> R.color.secondaryOverlayColor
-                2 -> R.color.tertiaryOverlayColor
-                3 -> R.color.standardOverlayColor
-                else -> throw IllegalArgumentException("Invalid textViewLayer value")
-            },
-            null
-        )
-    }
-
-    private fun getShadeLayerColor(): Int {
-        return resources.getColor(
-            when (textViewLayer) {
-                0 -> R.color.primaryOverlayShadeColor
-                1 -> R.color.secondaryOverlayShadeColor
-                2 -> R.color.tertiaryOverlayShadeColor
-                3 -> R.color.standardOverlayShadeColor
-                else -> throw IllegalArgumentException("Invalid textViewLayer value")
-            },
-            null
-        )
     }
 
     companion object {

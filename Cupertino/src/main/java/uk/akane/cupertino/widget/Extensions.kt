@@ -1,8 +1,10 @@
 package uk.akane.cupertino.widget
 
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Path
 import android.graphics.RectF
+import uk.akane.cupertino.R
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun Int.dpToPx(context: Context): Int =
@@ -88,4 +90,30 @@ fun Path.continuousRoundRect(left: Float, top: Float, right: Float, bottom: Floa
         left + offsets[0], bottom - offsets[9]
     )
     lineTo(left + offsets[0], top + offsets[9])
+}
+
+fun Resources.getOverlayLayerColor(textViewLayer: Int): Int {
+    return getColor(
+        when (textViewLayer) {
+            0 -> R.color.primaryOverlayColor
+            1 -> R.color.secondaryOverlayColor
+            2 -> R.color.tertiaryOverlayColor
+            3 -> R.color.standardOverlayColor
+            else -> throw IllegalArgumentException("Invalid textViewLayer value")
+        },
+        null
+    )
+}
+
+fun Resources.getShadeLayerColor(textViewLayer: Int): Int {
+    return getColor(
+        when (textViewLayer) {
+            0 -> R.color.primaryOverlayShadeColor
+            1 -> R.color.secondaryOverlayShadeColor
+            2 -> R.color.tertiaryOverlayShadeColor
+            3 -> R.color.standardOverlayShadeColor
+            else -> throw IllegalArgumentException("Invalid textViewLayer value")
+        },
+        null
+    )
 }

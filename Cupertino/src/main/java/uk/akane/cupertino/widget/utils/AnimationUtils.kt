@@ -2,6 +2,7 @@ package uk.akane.cupertino.widget.utils
 
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
+import android.content.res.Resources
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.os.Build
@@ -11,6 +12,7 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.PathInterpolator
 import androidx.core.animation.doOnEnd
+import uk.akane.cupertino.R
 
 object AnimationUtils {
 

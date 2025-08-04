@@ -20,6 +20,8 @@ import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.getOverlayLayerColor
+import uk.akane.cupertino.widget.getShadeLayerColor
 import uk.akane.cupertino.widget.utils.AnimationUtils
 
 class OverlayButton @JvmOverloads constructor(
@@ -82,9 +84,9 @@ class OverlayButton @JvmOverloads constructor(
     }
 
     private val overlayColorFilter =
-        PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
+        PorterDuffColorFilter(resources.getOverlayLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN)
     private val shadeColorFilter =
-        PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
+        PorterDuffColorFilter(resources.getShadeLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN)
     private val holdingColorFilter = PorterDuffColorFilter(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
     private var isTransform = false
@@ -185,32 +187,6 @@ class OverlayButton @JvmOverloads constructor(
         val state = super.onCreateDrawableState(extraSpace + 1)
         if (isChecked) mergeDrawableStates(state, CHECKED_STATE_SET)
         return state
-    }
-
-    private fun getOverlayLayerColor(): Int {
-        return resources.getColor(
-            when (textViewLayer) {
-                0 -> R.color.primaryOverlayColor
-                1 -> R.color.secondaryOverlayColor
-                2 -> R.color.tertiaryOverlayColor
-                3 -> R.color.standardOverlayColor
-                else -> throw IllegalArgumentException("Invalid textViewLayer value")
-            },
-            null
-        )
-    }
-
-    private fun getShadeLayerColor(): Int {
-        return resources.getColor(
-            when (textViewLayer) {
-                0 -> R.color.primaryOverlayShadeColor
-                1 -> R.color.secondaryOverlayShadeColor
-                2 -> R.color.tertiaryOverlayShadeColor
-                3 -> R.color.standardOverlayShadeColor
-                else -> throw IllegalArgumentException("Invalid textViewLayer value")
-            },
-            null
-        )
     }
 
     @SuppressLint("ClickableViewAccessibility")
