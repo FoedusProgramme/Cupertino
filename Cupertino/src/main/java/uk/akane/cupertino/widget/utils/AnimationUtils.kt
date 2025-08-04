@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.utils
 
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator

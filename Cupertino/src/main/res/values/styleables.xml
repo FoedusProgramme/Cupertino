@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <attr name="icon" format="reference" />
+    <attr name="iconSize" format="dimension" />
+
     <declare-styleable name="OverlayTextView">
         <attr name="textViewLayer" format="enum">
             <enum name="primary" value="0" />
@@ -16,11 +19,16 @@
             <enum name="tertiary" value="2" />
             <enum name="standard" value="3" />
         </attr>
-        <attr name="icon" format="reference" />
-        <attr name="iconSize" format="dimension" />
+        <attr name="icon" />
+        <attr name="iconSize" />
     </declare-styleable>
 
     <declare-styleable name="OverlaySlider">
         <attr name="momentum" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="OverlayBackgroundButton">
+        <attr name="icon" />
+        <attr name="iconSize" />
     </declare-styleable>
 </resources>

@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.slider
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -15,7 +15,8 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.doOnLayout
 import uk.akane.cupertino.R
-import uk.akane.cupertino.widget.AnimationUtils.interpolateColor
+import uk.akane.cupertino.widget.dpToPx
+import uk.akane.cupertino.widget.utils.AnimationUtils
 import kotlin.math.absoluteValue
 import kotlin.math.pow
 
@@ -186,14 +187,18 @@ class OverlaySlider @JvmOverloads constructor(
         ).apply {
 
             transformValueAnimator = this
-            this.interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingInterpolator
             duration = TRANSFORM_DURATION
 
             addUpdateListener {
                 transformFraction = animatedValue as Float
                 currentHeight = actualHeight * (1F + (HEIGHT_RESIZE_FACTOR - 1F) * transformFraction)
                 currentSidePadding = (width - (width - 2 * actualSidePadding) * (1F + (WIDTH_RESIZE_FACTOR - 1F) * transformFraction)) / 2
-                progressCurrentColor = interpolateColor(progressShadeInitialColor, progressShadeFinalColor, transformFraction)
+                progressCurrentColor = AnimationUtils.interpolateColor(
+                    progressShadeInitialColor,
+                    progressShadeFinalColor,
+                    transformFraction
+                )
                 updateTrackBound(currentHeight, currentSidePadding)
                 invalidate()
             }
@@ -255,7 +260,7 @@ class OverlaySlider @JvmOverloads constructor(
                 1.0F
             ).apply {
                 flingValueAnimator = this
-                this.interpolator = AnimationUtils.decelerateInterpolator
+                interpolator = AnimationUtils.decelerateInterpolator
                 duration = (lastVelocity / FRICTION).toLong().absoluteValue.coerceIn(100, 600)
 
                 addUpdateListener {

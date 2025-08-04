@@ -1,15 +1,15 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.divider
 
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewGroup
 import androidx.annotation.Px
-import android.view.ViewGroup.LayoutParams
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.dpToPx
 
 class OverlayDivider @JvmOverloads constructor(
     context: Context,
@@ -38,7 +38,8 @@ class OverlayDivider @JvmOverloads constructor(
     private val cornerRadius = 3.dpToPx(context)
 
     init {
-        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, 8.dpToPx(context))
+        layoutParams =
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 8.dpToPx(context))
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

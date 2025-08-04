@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.button
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -20,6 +20,7 @@ import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.utils.AnimationUtils
 
 class OverlayButton @JvmOverloads constructor(
     context: Context,
@@ -80,8 +81,10 @@ class OverlayButton @JvmOverloads constructor(
         return bitmap
     }
 
-    private val overlayColorFilter = PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
-    private val shadeColorFilter = PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
+    private val overlayColorFilter =
+        PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
+    private val shadeColorFilter =
+        PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
     private val holdingColorFilter = PorterDuffColorFilter(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
     private var isTransform = false
@@ -146,7 +149,7 @@ class OverlayButton @JvmOverloads constructor(
             1F
         ).apply {
             transformValueAnimator = this
-            this.interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingInterpolator
             duration = 200L
 
             doOnStart {

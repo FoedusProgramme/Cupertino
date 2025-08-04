@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.button
 
 import android.animation.ValueAnimator
 import android.content.Context
@@ -17,6 +17,9 @@ import androidx.core.animation.doOnStart
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.widget.base.ShrinkableView
+import uk.akane.cupertino.widget.dpToPx
 
 class StarTransformButton @JvmOverloads constructor(
     context: Context,
@@ -48,8 +51,10 @@ class StarTransformButton @JvmOverloads constructor(
     }
 
     private val filledStarPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val overlayColorFilter = PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
-    private val shadeColorFilter = PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
+    private val overlayColorFilter =
+        PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
+    private val shadeColorFilter =
+        PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
 
     init {
         isClickable = true

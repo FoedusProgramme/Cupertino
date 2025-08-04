@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.base
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -7,6 +7,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.animation.doOnEnd
+import uk.akane.cupertino.widget.utils.AnimationUtils
 
 @SuppressLint("ClickableViewAccessibility")
 open class ShrinkableView @JvmOverloads constructor(
@@ -65,7 +66,7 @@ open class ShrinkableView @JvmOverloads constructor(
             valueAnimator = this
 
             duration = shrinkDuration / 2
-            this.interpolator = this@ShrinkableView.interpolator
+            interpolator = this@ShrinkableView.interpolator
 
             addUpdateListener {
                 val scale = animatedValue as Float
