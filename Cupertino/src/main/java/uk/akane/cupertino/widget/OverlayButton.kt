@@ -1,17 +1,19 @@
 package uk.akane.cupertino.widget
 
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
-import android.graphics.PorterDuffXfermode
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Checkable
 import androidx.core.animation.doOnEnd
@@ -42,12 +44,10 @@ class OverlayButton @JvmOverloads constructor(
     private val transformCanvas: Canvas
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        isAntiAlias = true
         isFilterBitmap = true
     }
 
     val transformPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        isAntiAlias = true
         isFilterBitmap = true
     }
 
@@ -71,19 +71,21 @@ class OverlayButton @JvmOverloads constructor(
         iconDrawable?.callback = this
     }
 
-    fun Drawable.toBitmap(): Bitmap {
+    fun updateBitmap(drawable: Drawable): Bitmap {
         transformCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
         transformCanvas.drawBitmap(bitmap, 0F, 0F, null)
         bitmapCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
-        this.setBounds(0, 0, iconSize, iconSize)
-        this.draw(bitmapCanvas)
+        drawable.setBounds(0, 0, iconSize, iconSize)
+        drawable.draw(bitmapCanvas)
         return bitmap
     }
 
     private val overlayColorFilter = PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
     private val shadeColorFilter = PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
+    private val holdingColorFilter = PorterDuffColorFilter(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
     private var isTransform = false
+    private var isHolding = false
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -106,19 +108,22 @@ class OverlayButton @JvmOverloads constructor(
         left: Int,
         top: Int
     ) {
-        paint.colorFilter = overlayColorFilter
+        paint.colorFilter = if (isHolding && !isChecked) holdingColorFilter else overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
         canvas.drawBitmap(bitmap, left.toFloat(), top.toFloat(), paint)
 
         paint.colorFilter = shadeColorFilter
-        paint.blendMode = null
+        paint.blendMode = if (isHolding && !isChecked) BlendMode.SOFT_LIGHT else null
         canvas.drawBitmap(bitmap, left.toFloat(), top.toFloat(), paint)
     }
 
     override fun drawableStateChanged() {
         super.drawableStateChanged()
-        iconDrawable?.state = drawableState
-        iconDrawable!!.toBitmap()
+        iconDrawable?.apply {
+            state = drawableState
+            isHolding = false
+            updateBitmap(this)
+        }
     }
 
     override fun setChecked(checked: Boolean) {
@@ -141,7 +146,7 @@ class OverlayButton @JvmOverloads constructor(
             1F
         ).apply {
             transformValueAnimator = this
-            interpolator = AnimationUtils.easingInterpolator
+            this.interpolator = AnimationUtils.easingInterpolator
             duration = 200L
 
             doOnStart {
@@ -203,6 +208,21 @@ class OverlayButton @JvmOverloads constructor(
             },
             null
         )
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                isHolding = true
+                invalidate()
+            }
+            MotionEvent.ACTION_UP -> {
+                isHolding = false
+                invalidate()
+            }
+        }
+        return super.onTouchEvent(event)
     }
 
     companion object {

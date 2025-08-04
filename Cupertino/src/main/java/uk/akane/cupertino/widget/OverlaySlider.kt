@@ -186,7 +186,7 @@ class OverlaySlider @JvmOverloads constructor(
         ).apply {
 
             transformValueAnimator = this
-            interpolator = AnimationUtils.easingInterpolator
+            this.interpolator = AnimationUtils.easingInterpolator
             duration = TRANSFORM_DURATION
 
             addUpdateListener {
@@ -255,7 +255,7 @@ class OverlaySlider @JvmOverloads constructor(
                 1.0F
             ).apply {
                 flingValueAnimator = this
-                interpolator = AnimationUtils.decelerateInterpolator
+                this.interpolator = AnimationUtils.decelerateInterpolator
                 duration = (lastVelocity / FRICTION).toLong().absoluteValue.coerceIn(100, 600)
 
                 addUpdateListener {

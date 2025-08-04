@@ -6,6 +6,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.os.Build
 import android.view.Choreographer
+import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.PathInterpolator
@@ -15,6 +16,7 @@ object AnimationUtils {
 
     val easingInterpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
     val decelerateInterpolator: Interpolator = DecelerateInterpolator(1.7f)
+    val accelerateInterpolator: Interpolator = AccelerateInterpolator(1.7f)
 
     const val FASTEST_DURATION = 150L
     const val FAST_DURATION = 256L
