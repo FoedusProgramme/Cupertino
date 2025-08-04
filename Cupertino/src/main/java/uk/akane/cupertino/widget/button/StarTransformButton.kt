@@ -1,5 +1,7 @@
 package uk.akane.cupertino.widget.button
 
+import android.animation.Animator
+import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
@@ -219,25 +221,51 @@ class StarTransformButton @JvmOverloads constructor(
     }
 
     override fun toggle() {
-        isChecked = !isChecked
-        if (isChecked) {
-            animateChecked()
-        } else {
-            transformToUnchecked()
+        if (transformAnimatorSet == null || transformAnimatorSet?.isRunning == false) {
+            isChecked = !isChecked
+            if (isChecked) {
+                animateChecked()
+            } else {
+                transformToUnchecked()
+            }
         }
     }
 
-    private var transformValueAnimator: ValueAnimator? = null
+    private var transformAnimatorSet: AnimatorSet? = null
 
     private fun animateChecked() {
-        transformValueAnimator?.cancel()
-        transformValueAnimator = null
+        transformAnimatorSet?.cancel()
+        transformAnimatorSet = null
 
+        transformAnimatorSet = AnimatorSet().apply {
+            playSequentially(
+                hollowStarShrinkAnimator,
+                filledStarGrowAnimator,
+                filledStarShrinkAnimator,
+                transformBackground()
+            )
+            start()
+        }
+    }
+
+    private fun transformToUnchecked() {
+        transformAnimatorSet?.cancel()
+        transformAnimatorSet = null
+
+        transformAnimatorSet = AnimatorSet().apply {
+            playSequentially(
+                transformBackground(false),
+                redrawHollowStarAnimator
+            )
+            start()
+        }
+    }
+
+    private val hollowStarShrinkAnimator: Animator =
         ValueAnimator.ofFloat(
             1.0F,
             HOLLOW_STAR_MINIMUM_SHRINK_FRACTION
         ).apply {
-            transformValueAnimator = this
             duration = 300L
             interpolator = AnimationUtils.accelerateInterpolator
 
@@ -245,54 +273,33 @@ class StarTransformButton @JvmOverloads constructor(
                 hollowStarTransformFraction = animatedValue as Float
                 invalidate()
             }
-
             doOnEnd {
                 shouldDrawHollowStar = false
-                filledStarGrowAnimation()
             }
-
-            start()
         }
-    }
 
-    private fun filledStarGrowAnimation() {
-        transformValueAnimator?.cancel()
-        transformValueAnimator = null
-
+    private val filledStarGrowAnimator: Animator =
         ValueAnimator.ofFloat(
             HOLLOW_STAR_MINIMUM_SHRINK_FRACTION,
             FILLED_STAR_MAXIMUM_GROW_FRACTION
         ).apply {
-            transformValueAnimator = this
             duration = 400L
             interpolator = AnimationUtils.decelerateInterpolator
 
             doOnStart {
                 shouldDrawFilledStar = true
             }
-
             addUpdateListener {
                 transformFraction = animatedValue as Float
                 invalidate()
             }
-
-            doOnEnd {
-                filledStarShrinkAnimation()
-            }
-
-            start()
         }
-    }
 
-    private fun filledStarShrinkAnimation() {
-        transformValueAnimator?.cancel()
-        transformValueAnimator = null
-
+    private val filledStarShrinkAnimator: Animator =
         ValueAnimator.ofFloat(
             FILLED_STAR_MAXIMUM_GROW_FRACTION,
             HOLLOW_STAR_MINIMUM_SHRINK_FRACTION
         ).apply {
-            transformValueAnimator = this
             duration = 300L
             interpolator = AnimationUtils.accelerateInterpolator
 
@@ -300,25 +307,16 @@ class StarTransformButton @JvmOverloads constructor(
                 transformFraction = animatedValue as Float
                 invalidate()
             }
-
             doOnEnd {
                 shouldDrawFilledStar = false
-                transformBackground()
             }
-
-            start()
         }
-    }
 
-    private fun transformBackground(isChecked: Boolean = true) {
-        transformValueAnimator?.cancel()
-        transformValueAnimator = null
-
+    private fun transformBackground(isChecked: Boolean = true): Animator =
         ValueAnimator.ofFloat(
             if (isChecked) 1.0F else 0F,
             if (isChecked) 0F else 1.0F
         ).apply {
-            transformValueAnimator = this
             duration = 100L
             interpolator = AnimationUtils.easingInterpolator
 
@@ -328,12 +326,10 @@ class StarTransformButton @JvmOverloads constructor(
 
                 isOnRevertStage = !isChecked
             }
-
             addUpdateListener {
                 backgroundTransformFraction = animatedValue as Float
                 invalidate()
             }
-
             doOnEnd {
                 shouldDrawCheckedBackground = isChecked
                 shouldDrawNormalBackground = !isChecked
@@ -341,40 +337,24 @@ class StarTransformButton @JvmOverloads constructor(
                 isOnRevertStage = false
                 invalidate()
             }
-
-            start()
         }
-    }
 
-    private fun redrawHollowStar() {
-        transformValueAnimator?.cancel()
-        transformValueAnimator = null
-
+    private val redrawHollowStarAnimator: Animator =
         ValueAnimator.ofFloat(
             HOLLOW_STAR_MINIMUM_SHRINK_FRACTION,
             1.0F
         ).apply {
-            transformValueAnimator = this
             duration = 100L
             interpolator = AnimationUtils.easingInterpolator
 
             doOnStart {
                 shouldDrawHollowStar = true
             }
-
             addUpdateListener {
                 hollowStarTransformFraction = animatedValue as Float
                 invalidate()
             }
-
-            start()
         }
-    }
-
-    private fun transformToUnchecked() {
-        transformBackground(false)
-        redrawHollowStar()
-    }
 
     override fun isChecked(): Boolean = isChecked
 
