@@ -26,6 +26,7 @@
     <declare-styleable name="OverlaySlider">
         <attr name="momentum" format="boolean" />
         <attr name="overshoot" format="boolean" />
+        <attr name="resizeFactor" format="float" />
     </declare-styleable>
 
     <declare-styleable name="OverlayBackgroundButton">

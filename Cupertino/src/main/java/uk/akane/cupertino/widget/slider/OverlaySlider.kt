@@ -73,6 +73,7 @@ class OverlaySlider @JvmOverloads constructor(
         context.obtainStyledAttributes(attrs, R.styleable.OverlaySlider).apply {
             enableMomentum = getBoolean(R.styleable.OverlaySlider_momentum, true)
             enableOverShoot = getBoolean(R.styleable.OverlaySlider_overshoot, false)
+            heightResizeFactor = getFloat(R.styleable.OverlaySlider_resizeFactor, HEIGHT_RESIZE_FACTOR_DEFAULT)
             recycle()
         }
     }
@@ -205,7 +206,7 @@ class OverlaySlider @JvmOverloads constructor(
             addUpdateListener {
                 if (shouldLockValue) return@addUpdateListener
                 transformFraction = animatedValue as Float
-                currentHeight = actualHeight * (1F + (HEIGHT_RESIZE_FACTOR - 1F) * transformFraction)
+                currentHeight = actualHeight * (1F + (heightResizeFactor - 1F) * transformFraction)
                 currentSidePadding = (width - (width - 2 * actualSidePadding) * (1F + (WIDTH_RESIZE_FACTOR - 1F) * transformFraction)) / 2
                 progressCurrentColor = AnimationUtils.interpolateColor(
                     progressShadeInitialColor,
@@ -458,8 +459,10 @@ class OverlaySlider @JvmOverloads constructor(
         shouldLockValue = true
     }
 
+    private var heightResizeFactor: Float = 2.25F
+
     companion object {
-        const val HEIGHT_RESIZE_FACTOR = 2.25F
+        const val HEIGHT_RESIZE_FACTOR_DEFAULT = 2.25F
         const val HEIGHT_SCALE_FACTOR = 0.8F
         const val WIDTH_RESIZE_FACTOR = 1.05F
         const val WIDTH_SCALE_FACTOR = 1.025F
