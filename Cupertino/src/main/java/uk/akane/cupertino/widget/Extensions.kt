@@ -117,3 +117,21 @@ fun Resources.getShadeLayerColor(textViewLayer: Int): Int {
         null
     )
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun lerp(start: Float, stop: Float, amount: Float): Float {
+    return start + (stop - start) * amount
+}
+
+fun berp(a: Float, b: Float, value: Float): Float =
+    lerp(a, b, easingBezier(value))
+
+fun easingBezier(t: Float) = cubicBezier(t, 0.2F, 0F, 0F, 1F)
+
+fun cubicBezier(t: Float, p0: Float, p1: Float, p2: Float, p3: Float): Float {
+    val u = 1 - t
+    return u * u * u * p0 +
+            3 * u * u * t * p1 +
+            3 * u * t * t * p2 +
+            t * t * t * p3
+}

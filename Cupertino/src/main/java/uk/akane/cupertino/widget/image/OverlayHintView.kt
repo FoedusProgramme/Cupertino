@@ -4,15 +4,19 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.getOverlayLayerColor
+import uk.akane.cupertino.widget.getShadeLayerColor
+import androidx.core.graphics.alpha
 
 class OverlayHintView @JvmOverloads constructor(
     context: Context,
@@ -27,13 +31,15 @@ class OverlayHintView @JvmOverloads constructor(
     private val overlayColorFilter =
         PorterDuffColorFilter(resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN)
     private val shadeColorFilter =
-        PorterDuffColorFilter(resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN)
+        PorterDuffColorFilter(resources.getColor(R.color.white, null), PorterDuff.Mode.SRC_IN)
 
     private var iconDrawable: Drawable?
     private val iconSize: Int
 
     private var iconBitmap: Bitmap
     private var iconCanvas: Canvas
+
+    private var lowestLuminous = 0
 
     init {
         context.obtainStyledAttributes(attrs, R.styleable.OverlayHintView).apply {
@@ -47,6 +53,8 @@ class OverlayHintView @JvmOverloads constructor(
         iconBitmap = createBitmap(bitmapWidth, bitmapHeight)
         iconCanvas = Canvas(iconBitmap)
 
+        lowestLuminous = resources.getShadeLayerColor(0).alpha
+
         iconDrawable?.let { updateBitmap(it) }
     }
 
@@ -57,6 +65,12 @@ class OverlayHintView @JvmOverloads constructor(
         return iconBitmap
     }
 
+    var transformValue: Float = 0F
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val left = (width - iconBitmap.width) / 2f
@@ -64,10 +78,12 @@ class OverlayHintView @JvmOverloads constructor(
 
         paint.colorFilter = overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
+        paint.alpha = 255
         canvas.drawBitmap(iconBitmap, left, top, paint)
 
         paint.colorFilter = shadeColorFilter
         paint.blendMode = null
+        paint.alpha = (lowestLuminous + transformValue * (255 - lowestLuminous)).toInt()
         canvas.drawBitmap(iconBitmap, left, top, paint)
     }
 

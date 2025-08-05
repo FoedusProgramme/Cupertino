@@ -14,11 +14,13 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.doOnLayout
-import com.google.android.material.animation.AnimationUtils.lerp
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
+import uk.akane.cupertino.widget.lerp
 import uk.akane.cupertino.widget.utils.AnimationUtils
 import kotlin.math.absoluteValue
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 
 class OverlaySlider @JvmOverloads constructor(
@@ -65,7 +67,6 @@ class OverlaySlider @JvmOverloads constructor(
             updateTrackBound(actualHeight, currentSidePadding)
 
             progressCurrentColor = progressShadeInitialColor
-            pivotX = width / 2F
             pivotY = height / 2F
         }
 
@@ -76,13 +77,13 @@ class OverlaySlider @JvmOverloads constructor(
         }
     }
 
-    private val actualHeight: Float = 7F.dpToPx(context)
+    private val actualHeight: Float = 7.5F.dpToPx(context)
     private var currentHeight: Float = 0F
 
     private val actualSidePadding: Float = 16F.dpToPx(context)
     private var currentSidePadding: Float = 0F
-
-    private val sideOverShootBound: Float = 9F.dpToPx(context)
+    private val sideOverShootFingerBound: Float = 100F.dpToPx(context)
+    private val sideOverShootTransition: Float = 8F.dpToPx(context)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -176,13 +177,15 @@ class OverlaySlider @JvmOverloads constructor(
 
     private fun onUp(event: MotionEvent) {
         Log.d("TAG", "onUp: $event")
-
+        triggeredOvershootXLeft = 0F
+        triggeredOvershootXRight = 0F
         transformSize(true)
     }
 
     private fun cancelTransform() {
         transformValueAnimator?.cancel()
         transformValueAnimator = null
+        shouldLockValue = false
     }
 
     private fun transformSize(isShrink: Boolean = false) {
@@ -195,8 +198,12 @@ class OverlaySlider @JvmOverloads constructor(
             transformValueAnimator = this
             interpolator = AnimationUtils.easingInterpolator
             duration = TRANSFORM_DURATION
+            val startScaleX = scaleX
+            val startScaleY = scaleY
+            val startTranslationX = translationX
 
             addUpdateListener {
+                if (shouldLockValue) return@addUpdateListener
                 transformFraction = animatedValue as Float
                 currentHeight = actualHeight * (1F + (HEIGHT_RESIZE_FACTOR - 1F) * transformFraction)
                 currentSidePadding = (width - (width - 2 * actualSidePadding) * (1F + (WIDTH_RESIZE_FACTOR - 1F) * transformFraction)) / 2
@@ -205,8 +212,14 @@ class OverlaySlider @JvmOverloads constructor(
                     progressShadeFinalColor,
                     transformFraction
                 )
+
+                scaleX = lerp(startScaleX, 1F, if (isShrink) 1f - transformFraction else transformFraction)
+                scaleY = lerp(startScaleY, 1F, if (isShrink) 1f - transformFraction else transformFraction)
+                translationX = lerp(startTranslationX, 0F, if (isShrink) 1f - transformFraction else transformFraction)
+
                 updateTrackBound(currentHeight, currentSidePadding)
-                emphasizeListenerList.forEach { it.onEmphasizeProgress(actualSidePadding - currentSidePadding) }
+
+                updateListeners(1)
                 invalidate()
             }
 
@@ -221,6 +234,11 @@ class OverlaySlider @JvmOverloads constructor(
     private var lastMotionTime = 0L
     private var penultimateMotionX = 0F
     private var penultimateMotionTime = 0L
+
+    private var triggeredOvershootXLeft = 0F
+    private var triggeredOvershootXRight = 0F
+    private var triggerOvershootTransitionMark = 0
+    private var shouldLockValue = false
 
     override fun onScroll(
         e1: MotionEvent?,
@@ -237,23 +255,124 @@ class OverlaySlider @JvmOverloads constructor(
         lastMotionX = e2.x
         lastMotionTime = e2.eventTime
 
-        if (value + progressMoved <= 0F) {
+        if (enableOverShoot) {
+            calculateOverShoot(progressMoved)
+        } else {
+            calculateNormalValue(progressMoved)
+        }
+
+        return true
+    }
+
+    private fun calculateOverShoot(progressMoved: Float) {
+        if (value + progressMoved <= 0F || lastMotionX < triggeredOvershootXLeft) {
+            triggerOvershootTransitionMark = 1
+
             if (value != 0F) {
                 value = 0F
                 invalidate()
             }
 
-            pivotX = width + actualSidePadding
-            scaleX = lerp(1F, 1.1F, distanceX / sideOverShootBound).coerceIn(1F, 1.1F)
-            Log.d("TAG", "scaleX: $scaleX, dx: $distanceX, $sideOverShootBound")
-            return true
-        } else if (value + progressMoved >= 1F) {
+            triggeredOvershootXLeft = if (triggeredOvershootXLeft == 0F) {
+                lastMotionX
+            } else if (lastMotionX >= triggeredOvershootXLeft) {
+                0F
+            } else {
+                max(triggeredOvershootXLeft, lastMotionX)
+            }
 
-            return true
+            pivotX = width - actualSidePadding
+            val squeezeFraction = ((triggeredOvershootXLeft - lastMotionX) / sideOverShootFingerBound).coerceIn(0F, 1F)
+            scaleX = lerp(1F, WIDTH_SCALE_FACTOR, squeezeFraction)
+            scaleY = lerp(1F, HEIGHT_SCALE_FACTOR, squeezeFraction)
+            translationX = lerp(0F, -sideOverShootTransition, squeezeFraction)
+
+            updateListeners(3)
+
+        } else if (value + progressMoved >= 1F || (lastMotionX > triggeredOvershootXRight && triggeredOvershootXRight != 0F)) {
+            triggerOvershootTransitionMark = 2
+
+            if (value != 1F) {
+                value = 1F
+                invalidate()
+            }
+
+            triggeredOvershootXRight = if (triggeredOvershootXRight == 0F) {
+                lastMotionX
+            } else if (lastMotionX <= triggeredOvershootXRight) {
+                0F
+            } else {
+                min(triggeredOvershootXRight, lastMotionX)
+            }
+
+            pivotX = actualSidePadding
+            val squeezeFraction = ((lastMotionX - triggeredOvershootXRight) / sideOverShootFingerBound).coerceIn(0F, 1F)
+            scaleX = lerp(1F, WIDTH_SCALE_FACTOR, squeezeFraction)
+            scaleY = lerp(1F, HEIGHT_SCALE_FACTOR, squeezeFraction)
+            translationX = lerp(0F, sideOverShootTransition, squeezeFraction)
+
+            updateListeners(2)
+
+        } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F){
+            calculateNormalValue(progressMoved)
         } else {
-            value += progressMoved
-            invalidate()
-            return true
+            triggeredOvershootXLeft = 0F
+            triggeredOvershootXRight = 0F
+        }
+    }
+
+    private fun calculateNormalValue(progressMoved: Float) {
+        triggerOvershootTransitionMark = 0
+        value += progressMoved
+        invalidate()
+    }
+
+    fun updateListeners(triggerPlace: Int) {
+        emphasizeListenerList.forEach {
+
+            val emphasizeTransition = (actualSidePadding - currentSidePadding)
+            val scaleTransition = (scaleX - 1f) * (calculatedProgress + currentSidePadding)
+            val horizontalTransition = translationX * scaleX
+
+            Log.d("TAG", "horizontalTransition: ${translationX * scaleX}, triggerPlace: $triggerPlace")
+
+            it.onEmphasizeProgressLeft(
+                if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 0) {
+                    // When transitioning back to original position (without previous transition, triggered on return).
+                    emphasizeTransition
+                } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 1) {
+                    // When transitioning back to original position (with previous transition, triggered on return).
+                    emphasizeTransition + scaleTransition - horizontalTransition
+                } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 2) {
+                    // Other side transition (triggered on return).
+                    emphasizeTransition - horizontalTransition
+                } else if (triggeredOvershootXLeft != 0F) {
+                    // Left icon transition (triggered during transition).
+                    emphasizeTransition + scaleTransition - horizontalTransition
+                } else {
+                    // Opposite side transition (triggered during transition)
+                    emphasizeTransition - horizontalTransition
+                }
+            )
+            it.onEmphasizeProgressRight(
+                if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 0) {
+                    // When transitioning back to original position (without previous transition, triggered on return).
+                    emphasizeTransition
+                } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 2) {
+                    // When transitioning back to original position (with previous transition, triggered on return).
+                    emphasizeTransition + scaleTransition + horizontalTransition
+                } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 1) {
+                    // Other side transition (triggered on return).
+                    emphasizeTransition + horizontalTransition
+                } else if (triggeredOvershootXRight != 0F) {
+                    // Right icon transition (triggered during transition).
+                    emphasizeTransition + scaleTransition + horizontalTransition
+                } else {
+                    // Opposite side transition (triggered during transition)
+                    emphasizeTransition + horizontalTransition
+                }
+            )
+            it.onEmphasizeAll(transformFraction)
         }
     }
 
@@ -284,7 +403,7 @@ class OverlaySlider @JvmOverloads constructor(
             ).apply {
                 flingValueAnimator = this
                 interpolator = AnimationUtils.decelerateInterpolator
-                duration = (lastVelocity / FRICTION).toLong().absoluteValue.coerceIn(100, 600)
+                duration = (lastVelocity / FRICTION).toLong().absoluteValue.coerceIn(200, 600)
 
                 addUpdateListener {
                     flingFraction = animatedValue as Float
@@ -317,7 +436,9 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     interface EmphasizeListener {
-        fun onEmphasizeProgress(translationX: Float)
+        fun onEmphasizeProgressLeft(translationX: Float)
+        fun onEmphasizeProgressRight(translationX: Float)
+        fun onEmphasizeAll(fraction: Float)
     }
 
     private val emphasizeListenerList: MutableList<EmphasizeListener> = mutableListOf()
@@ -334,11 +455,14 @@ class OverlaySlider @JvmOverloads constructor(
     private fun resetAnimator() {
         flingValueAnimator?.cancel()
         flingValueAnimator = null
+        shouldLockValue = true
     }
 
     companion object {
         const val HEIGHT_RESIZE_FACTOR = 2.25F
+        const val HEIGHT_SCALE_FACTOR = 0.8F
         const val WIDTH_RESIZE_FACTOR = 1.05F
+        const val WIDTH_SCALE_FACTOR = 1.025F
         const val TRANSFORM_DURATION = 250L
         const val FRICTION = 0.01F
     }
