@@ -86,7 +86,6 @@ class StarTransformButton @JvmOverloads constructor(
 
     private var shouldDrawFilledStar = false
     private var shouldDrawHollowStar = true
-    private var isOnRevertStage = false
     private var transformFraction = HOLLOW_STAR_MINIMUM_SHRINK_FRACTION
     private var hollowStarTransformFraction = 1F
     private var backgroundTransformFraction = 1F
@@ -138,7 +137,7 @@ class StarTransformButton @JvmOverloads constructor(
         val left = centerX - drawWidth / 2f
         val top = centerY - drawHeight / 2f
 
-        paint.alpha = if (isOnRevertStage) (255 * (1F - factor)).toInt() else 255
+        paint.alpha = (255 * (1F - factor)).toInt()
 
         paint.colorFilter = overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
@@ -323,8 +322,6 @@ class StarTransformButton @JvmOverloads constructor(
             doOnStart {
                 shouldDrawCheckedBackground = true
                 shouldDrawNormalBackground = !isChecked
-
-                isOnRevertStage = !isChecked
             }
             addUpdateListener {
                 backgroundTransformFraction = animatedValue as Float
@@ -333,8 +330,6 @@ class StarTransformButton @JvmOverloads constructor(
             doOnEnd {
                 shouldDrawCheckedBackground = isChecked
                 shouldDrawNormalBackground = !isChecked
-
-                isOnRevertStage = false
                 invalidate()
             }
         }

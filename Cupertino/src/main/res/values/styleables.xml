@@ -25,10 +25,17 @@
 
     <declare-styleable name="OverlaySlider">
         <attr name="momentum" format="boolean" />
+        <attr name="overshoot" format="boolean" />
     </declare-styleable>
 
     <declare-styleable name="OverlayBackgroundButton">
         <attr name="icon" />
         <attr name="iconSize" />
     </declare-styleable>
+
+    <declare-styleable name="OverlayHintView">
+        <attr name="icon" />
+        <attr name="iconSize" />
+    </declare-styleable>
+
 </resources>

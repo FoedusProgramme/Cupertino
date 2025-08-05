@@ -14,6 +14,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.doOnLayout
+import com.google.android.material.animation.AnimationUtils.lerp
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
 import uk.akane.cupertino.widget.utils.AnimationUtils
@@ -53,6 +54,7 @@ class OverlaySlider @JvmOverloads constructor(
     private var progressCurrentColor = 0
 
     private var enableMomentum = true
+    private var enableOverShoot = false
 
     init {
         gestureDetector.setIsLongpressEnabled(false)
@@ -63,10 +65,13 @@ class OverlaySlider @JvmOverloads constructor(
             updateTrackBound(actualHeight, currentSidePadding)
 
             progressCurrentColor = progressShadeInitialColor
+            pivotX = width / 2F
+            pivotY = height / 2F
         }
 
         context.obtainStyledAttributes(attrs, R.styleable.OverlaySlider).apply {
             enableMomentum = getBoolean(R.styleable.OverlaySlider_momentum, true)
+            enableOverShoot = getBoolean(R.styleable.OverlaySlider_overshoot, false)
             recycle()
         }
     }
@@ -76,6 +81,8 @@ class OverlaySlider @JvmOverloads constructor(
 
     private val actualSidePadding: Float = 16F.dpToPx(context)
     private var currentSidePadding: Float = 0F
+
+    private val sideOverShootBound: Float = 9F.dpToPx(context)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -185,7 +192,6 @@ class OverlaySlider @JvmOverloads constructor(
             transformFraction,
             if (isShrink) 0F else 1F
         ).apply {
-
             transformValueAnimator = this
             interpolator = AnimationUtils.easingInterpolator
             duration = TRANSFORM_DURATION
@@ -200,6 +206,7 @@ class OverlaySlider @JvmOverloads constructor(
                     transformFraction
                 )
                 updateTrackBound(currentHeight, currentSidePadding)
+                emphasizeListenerList.forEach { it.onEmphasizeProgress(actualSidePadding - currentSidePadding) }
                 invalidate()
             }
 
@@ -221,16 +228,33 @@ class OverlaySlider @JvmOverloads constructor(
         distanceX: Float,
         distanceY: Float
     ): Boolean {
-        flingValueAnimator?.cancel()
-        flingValueAnimator = null
+        resetAnimator()
+
         val progressMoved = -distanceX / calculatedProgress
-        value += progressMoved
-        invalidate()
+
         penultimateMotionX = lastMotionX
         penultimateMotionTime = lastMotionTime
         lastMotionX = e2.x
         lastMotionTime = e2.eventTime
-        return true
+
+        if (value + progressMoved <= 0F) {
+            if (value != 0F) {
+                value = 0F
+                invalidate()
+            }
+
+            pivotX = width + actualSidePadding
+            scaleX = lerp(1F, 1.1F, distanceX / sideOverShootBound).coerceIn(1F, 1.1F)
+            Log.d("TAG", "scaleX: $scaleX, dx: $distanceX, $sideOverShootBound")
+            return true
+        } else if (value + progressMoved >= 1F) {
+
+            return true
+        } else {
+            value += progressMoved
+            invalidate()
+            return true
+        }
     }
 
     override fun onLongPress(e: MotionEvent) {}
@@ -252,8 +276,7 @@ class OverlaySlider @JvmOverloads constructor(
                 )
             val distance = lastVelocity.pow(2) / 2 / FRICTION / calculatedProgress
             val flingStartValue = value
-            flingValueAnimator?.cancel()
-            flingValueAnimator = null
+            resetAnimator()
 
             ValueAnimator.ofFloat(
                 0F,
@@ -293,8 +316,28 @@ class OverlaySlider @JvmOverloads constructor(
         }
     }
 
+    interface EmphasizeListener {
+        fun onEmphasizeProgress(translationX: Float)
+    }
+
+    private val emphasizeListenerList: MutableList<EmphasizeListener> = mutableListOf()
+
+    override fun onDetachedFromWindow() {
+        emphasizeListenerList.clear()
+        super.onDetachedFromWindow()
+    }
+
+    fun addEmphasizeListener(listener: EmphasizeListener) {
+        emphasizeListenerList.add(listener)
+    }
+
+    private fun resetAnimator() {
+        flingValueAnimator?.cancel()
+        flingValueAnimator = null
+    }
+
     companion object {
-        const val HEIGHT_RESIZE_FACTOR = 2.5F
+        const val HEIGHT_RESIZE_FACTOR = 2.25F
         const val WIDTH_RESIZE_FACTOR = 1.05F
         const val TRANSFORM_DURATION = 250L
         const val FRICTION = 0.01F
