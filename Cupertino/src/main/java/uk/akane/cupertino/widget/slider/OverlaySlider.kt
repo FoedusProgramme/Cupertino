@@ -350,8 +350,8 @@ class OverlaySlider @JvmOverloads constructor(
             val emphasizeTransition = (actualSidePadding - currentSidePadding)
             val scaleTransition = (scaleX - 1f) * (calculatedProgress + currentSidePadding)
             val horizontalTransition = translationX * scaleX
-
-            Log.d(TAG, "horizontalTransition: ${translationX * scaleX}, triggerPlace: $triggerPlace")
+            val verticalTransition = (currentHeight - actualHeight) / 2
+            Log.d("TAG", "height: $height, currentH: $currentHeight, scy: $scaleY, actH: $actualHeight")
 
             it.onEmphasizeProgressLeft(
                 if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 0) {
@@ -390,6 +390,7 @@ class OverlaySlider @JvmOverloads constructor(
                 }
             )
             it.onEmphasizeAll(transformFraction)
+            it.onEmphasizeVertical(emphasizeTransition, verticalTransition)
         }
     }
 
@@ -455,9 +456,10 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     interface EmphasizeListener {
-        fun onEmphasizeProgressLeft(translationX: Float)
-        fun onEmphasizeProgressRight(translationX: Float)
-        fun onEmphasizeAll(fraction: Float)
+        fun onEmphasizeProgressLeft(translationX: Float) {}
+        fun onEmphasizeProgressRight(translationX: Float) {}
+        fun onEmphasizeAll(fraction: Float) {}
+        fun onEmphasizeVertical(translationX: Float, translationY: Float) {}
     }
 
     private val emphasizeListenerList: MutableList<EmphasizeListener> = mutableListOf()
