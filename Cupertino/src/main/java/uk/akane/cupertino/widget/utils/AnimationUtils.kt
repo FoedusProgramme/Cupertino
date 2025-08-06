@@ -23,6 +23,7 @@ object AnimationUtils {
     const val FASTEST_DURATION = 150L
     const val FAST_DURATION = 256L
     const val MID_DURATION = 350L
+    const val LONG_DURATION = 500L
 
     val addXfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
 

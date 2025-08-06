@@ -351,7 +351,6 @@ class OverlaySlider @JvmOverloads constructor(
             val scaleTransition = (scaleX - 1f) * (calculatedProgress + currentSidePadding)
             val horizontalTransition = translationX * scaleX
             val verticalTransition = (currentHeight - actualHeight) / 2
-            Log.d("TAG", "height: $height, currentH: $currentHeight, scy: $scaleY, actH: $actualHeight")
 
             it.onEmphasizeProgressLeft(
                 if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 0) {
