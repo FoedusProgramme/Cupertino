@@ -36,9 +36,12 @@ class OverlaySlider @JvmOverloads constructor(
     private var flingValueAnimator: ValueAnimator? = null
     private var transformFraction: Float = 0F
 
-    var valueTo = 1F
+    var valueTo = 100F
     var valueFrom = 0F
-    var value = 0.2F
+    var value = 20F
+
+    private val normalizedValue
+        get() = ((value - valueFrom) / (valueTo - valueFrom)).coerceIn(0F, 1F)
 
     val defaultPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -59,6 +62,7 @@ class OverlaySlider @JvmOverloads constructor(
     private var enableOverShoot = false
 
     init {
+        @Suppress("UsePropertyAccessSyntax")
         gestureDetector.setIsLongpressEnabled(false)
 
         doOnLayout {
@@ -108,7 +112,7 @@ class OverlaySlider @JvmOverloads constructor(
         canvas.drawRect(
             calculatedLeft,
             calculatedTop,
-            calculatedLeft + calculatedProgress * value,
+            calculatedLeft + calculatedProgress * normalizedValue,
             calculatedBottom,
             paint
         )
@@ -119,7 +123,7 @@ class OverlaySlider @JvmOverloads constructor(
         canvas.drawRect(
             calculatedLeft,
             calculatedTop,
-            calculatedLeft + calculatedProgress * value,
+            calculatedLeft + calculatedProgress * normalizedValue,
             calculatedBottom,
             paint
         )
@@ -130,7 +134,7 @@ class OverlaySlider @JvmOverloads constructor(
         paint.blendMode = BlendMode.OVERLAY
         paint.color = trackOverlayColor
         canvas.drawRect(
-            calculatedLeft + calculatedProgress * value,
+            calculatedLeft + calculatedProgress * normalizedValue,
             calculatedTop,
             calculatedRight,
             calculatedBottom,
@@ -141,7 +145,7 @@ class OverlaySlider @JvmOverloads constructor(
         paint.blendMode = null
         paint.color = trackShadeColor
         canvas.drawRect(
-            calculatedLeft + calculatedProgress * value,
+            calculatedLeft + calculatedProgress * normalizedValue,
             calculatedTop,
             calculatedRight,
             calculatedBottom,
@@ -177,7 +181,7 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     private fun onUp(event: MotionEvent) {
-        Log.d("TAG", "onUp: $event")
+        Log.d(TAG, "onUp: $event")
         triggeredOvershootXLeft = 0F
         triggeredOvershootXRight = 0F
         transformSize(true)
@@ -214,9 +218,21 @@ class OverlaySlider @JvmOverloads constructor(
                     transformFraction
                 )
 
-                scaleX = lerp(startScaleX, 1F, if (isShrink) 1f - transformFraction else transformFraction)
-                scaleY = lerp(startScaleY, 1F, if (isShrink) 1f - transformFraction else transformFraction)
-                translationX = lerp(startTranslationX, 0F, if (isShrink) 1f - transformFraction else transformFraction)
+                scaleX = lerp(
+                    startScaleX,
+                    1F,
+                    if (isShrink) 1f - transformFraction else transformFraction
+                )
+                scaleY = lerp(
+                    startScaleY,
+                    1F,
+                    if (isShrink) 1f - transformFraction else transformFraction
+                )
+                translationX = lerp(
+                    startTranslationX,
+                    0F,
+                    if (isShrink) 1f - transformFraction else transformFraction
+                )
 
                 updateTrackBound(currentHeight, currentSidePadding)
 
@@ -249,7 +265,7 @@ class OverlaySlider @JvmOverloads constructor(
     ): Boolean {
         resetAnimator()
 
-        val progressMoved = -distanceX / calculatedProgress
+        val progressMoved = (-distanceX / calculatedProgress) * (valueTo - valueFrom)
 
         penultimateMotionX = lastMotionX
         penultimateMotionTime = lastMotionTime
@@ -266,11 +282,11 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     private fun calculateOverShoot(progressMoved: Float) {
-        if (value + progressMoved <= 0F || lastMotionX < triggeredOvershootXLeft) {
+        if (value + progressMoved <= valueFrom || lastMotionX < triggeredOvershootXLeft) {
             triggerOvershootTransitionMark = 1
 
-            if (value != 0F) {
-                value = 0F
+            if (value != valueFrom) {
+                value = valueFrom
                 invalidate()
             }
 
@@ -290,11 +306,11 @@ class OverlaySlider @JvmOverloads constructor(
 
             updateListeners(3)
 
-        } else if (value + progressMoved >= 1F || (lastMotionX > triggeredOvershootXRight && triggeredOvershootXRight != 0F)) {
+        } else if (value + progressMoved >= valueTo || (lastMotionX > triggeredOvershootXRight && triggeredOvershootXRight != 0F)) {
             triggerOvershootTransitionMark = 2
 
-            if (value != 1F) {
-                value = 1F
+            if (value != valueTo) {
+                value = valueTo
                 invalidate()
             }
 
@@ -314,7 +330,7 @@ class OverlaySlider @JvmOverloads constructor(
 
             updateListeners(2)
 
-        } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F){
+        } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F) {
             calculateNormalValue(progressMoved)
         } else {
             triggeredOvershootXLeft = 0F
@@ -324,7 +340,7 @@ class OverlaySlider @JvmOverloads constructor(
 
     private fun calculateNormalValue(progressMoved: Float) {
         triggerOvershootTransitionMark = 0
-        value += progressMoved
+        value = (value + progressMoved).coerceIn(valueFrom, valueTo)
         invalidate()
     }
 
@@ -335,7 +351,7 @@ class OverlaySlider @JvmOverloads constructor(
             val scaleTransition = (scaleX - 1f) * (calculatedProgress + currentSidePadding)
             val horizontalTransition = translationX * scaleX
 
-            Log.d("TAG", "horizontalTransition: ${translationX * scaleX}, triggerPlace: $triggerPlace")
+            Log.d(TAG, "horizontalTransition: ${translationX * scaleX}, triggerPlace: $triggerPlace")
 
             it.onEmphasizeProgressLeft(
                 if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F && triggerOvershootTransitionMark == 0) {
@@ -394,7 +410,7 @@ class OverlaySlider @JvmOverloads constructor(
                     -10F,
                     10F
                 )
-            val distance = lastVelocity.pow(2) / 2 / FRICTION / calculatedProgress
+            val distance = (lastVelocity.pow(2) / 2 / FRICTION / calculatedProgress) * (valueTo - valueFrom)
             val flingStartValue = value
             resetAnimator()
 
@@ -420,7 +436,9 @@ class OverlaySlider @JvmOverloads constructor(
             }
         }
 
-        if (e2.action == MotionEvent.ACTION_UP) { onUp(e2) }
+        if (e2.action == MotionEvent.ACTION_UP) {
+            onUp(e2)
+        }
         return true
     }
 
@@ -462,6 +480,8 @@ class OverlaySlider @JvmOverloads constructor(
     private var heightResizeFactor: Float = 2.25F
 
     companion object {
+        const val TAG = "OverlaySlider"
+
         const val HEIGHT_RESIZE_FACTOR_DEFAULT = 2.25F
         const val HEIGHT_SCALE_FACTOR = 0.8F
         const val WIDTH_RESIZE_FACTOR = 1.05F

@@ -39,8 +39,8 @@ class OverlayTextView @JvmOverloads constructor(
             }
         }
 
-        textColorField = (HiddenApiBypass.getInstanceFields(TextView::class.java)
-            .find { (it as Field).name == "mCurTextColor" } ?: throw NoSuchFieldException("Field 'mCurTextColor' not found"))
+        textColorField = HiddenApiBypass.getInstanceFields(TextView::class.java)
+            .find { it.name == "mCurTextColor" } ?: throw NoSuchFieldException("Field 'mCurTextColor' not found")
         textColorField.isAccessible = true
 
         isSingleLine = true
