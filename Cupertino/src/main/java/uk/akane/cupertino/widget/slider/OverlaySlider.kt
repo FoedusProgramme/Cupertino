@@ -195,7 +195,6 @@ class OverlaySlider @JvmOverloads constructor(
     private fun cancelTransform() {
         transformValueAnimator?.cancel()
         transformValueAnimator = null
-        shouldLockValue = false
     }
 
     private fun transformSize(isShrink: Boolean = false) {
@@ -210,7 +209,6 @@ class OverlaySlider @JvmOverloads constructor(
             duration = TRANSFORM_DURATION
 
             addUpdateListener {
-                if (shouldLockValue) return@addUpdateListener
                 transformFraction = animatedValue as Float
                 currentHeight = actualHeight * (1F + (heightResizeFactor - 1F) * transformFraction)
                 currentSidePadding = (width - (width - 2 * actualSidePadding) * (1F + (WIDTH_RESIZE_FACTOR - 1F) * transformFraction)) / 2
@@ -299,7 +297,6 @@ class OverlaySlider @JvmOverloads constructor(
     private var triggeredOvershootXLeft = 0F
     private var triggeredOvershootXRight = 0F
     private var triggerOvershootTransitionMark = 0
-    private var shouldLockValue = false
 
     override fun onScroll(
         e1: MotionEvent?,
@@ -307,7 +304,6 @@ class OverlaySlider @JvmOverloads constructor(
         distanceX: Float,
         distanceY: Float
     ): Boolean {
-        resetFlingAnimator()
         if (enableOverShoot) resetOverShootAnimator()
 
         val progressMoved = (-distanceX / calculatedProgress) * (valueTo - valueFrom)
@@ -368,7 +364,6 @@ class OverlaySlider @JvmOverloads constructor(
     private fun resetFlingAnimator() {
         flingValueAnimator?.cancel()
         flingValueAnimator = null
-        shouldLockValue = true
     }
 
     private fun calculateOverShoot(progressMoved: Float) {
