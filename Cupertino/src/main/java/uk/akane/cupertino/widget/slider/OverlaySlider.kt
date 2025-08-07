@@ -33,8 +33,11 @@ class OverlaySlider @JvmOverloads constructor(
     private var gestureDetector = GestureDetector(context, this)
 
     private var transformValueAnimator: ValueAnimator? = null
+    private var overshootValueAnimator: ValueAnimator? = null
     private var flingValueAnimator: ValueAnimator? = null
     private var transformFraction: Float = 0F
+    private var squeezeFraction: Float = 0F
+    private var flingFraction: Float = 0F
 
     var valueTo = 100F
     var valueFrom = 0F
@@ -60,6 +63,7 @@ class OverlaySlider @JvmOverloads constructor(
 
     private var enableMomentum = true
     private var enableOverShoot = false
+    private var heightResizeFactor: Float = 2.25F
 
     init {
         @Suppress("UsePropertyAccessSyntax")
@@ -185,6 +189,7 @@ class OverlaySlider @JvmOverloads constructor(
         triggeredOvershootXLeft = 0F
         triggeredOvershootXRight = 0F
         transformSize(true)
+        if (enableOverShoot) resetOverShootSize()
     }
 
     private fun cancelTransform() {
@@ -203,9 +208,6 @@ class OverlaySlider @JvmOverloads constructor(
             transformValueAnimator = this
             interpolator = AnimationUtils.easingInterpolator
             duration = TRANSFORM_DURATION
-            val startScaleX = scaleX
-            val startScaleY = scaleY
-            val startTranslationX = translationX
 
             addUpdateListener {
                 if (shouldLockValue) return@addUpdateListener
@@ -218,22 +220,6 @@ class OverlaySlider @JvmOverloads constructor(
                     transformFraction
                 )
 
-                scaleX = lerp(
-                    startScaleX,
-                    1F,
-                    if (isShrink) 1f - transformFraction else transformFraction
-                )
-                scaleY = lerp(
-                    startScaleY,
-                    1F,
-                    if (isShrink) 1f - transformFraction else transformFraction
-                )
-                translationX = lerp(
-                    startTranslationX,
-                    0F,
-                    if (isShrink) 1f - transformFraction else transformFraction
-                )
-
                 updateTrackBound(currentHeight, currentSidePadding)
 
                 updateListeners(1)
@@ -244,7 +230,64 @@ class OverlaySlider @JvmOverloads constructor(
         }
     }
 
-    override fun onShowPress(e: MotionEvent) {
+    private fun resetOverShootAnimator() {
+        overshootValueAnimator?.cancel()
+        overshootValueAnimator = null
+    }
+
+    private fun resetOverShootSize() {
+        resetOverShootAnimator()
+
+        ValueAnimator.ofFloat(
+            squeezeFraction,
+            0F
+        ).apply {
+            overshootValueAnimator = this
+            interpolator = AnimationUtils.easingInterpolator
+            duration = TRANSFORM_DURATION
+
+            val startScaleX = scaleX
+            val startScaleY = scaleY
+            val startTranslationX = translationX
+
+            addUpdateListener {
+                squeezeFraction = animatedValue as Float
+
+                scaleX = lerp(
+                    startScaleX,
+                    1F,
+                    1F - squeezeFraction
+                )
+                scaleY = lerp(
+                    startScaleY,
+                    1F,
+                    1F - squeezeFraction
+                )
+                translationX = lerp(
+                    startTranslationX,
+                    0F,
+                    1F - squeezeFraction
+                )
+            }
+
+            start()
+        }
+    }
+
+    override fun onShowPress(e: MotionEvent) {}
+
+    override fun onLongPress(e: MotionEvent) {}
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return if (gestureDetector.onTouchEvent(event)) {
+            true
+        } else if (event.action == MotionEvent.ACTION_UP) {
+            onUp(event)
+            true
+        } else {
+            super.onTouchEvent(event)
+        }
     }
 
     private var lastMotionX = 0F
@@ -263,7 +306,8 @@ class OverlaySlider @JvmOverloads constructor(
         distanceX: Float,
         distanceY: Float
     ): Boolean {
-        resetAnimator()
+        resetFlingAnimator()
+        if (enableOverShoot) resetOverShootAnimator()
 
         val progressMoved = (-distanceX / calculatedProgress) * (valueTo - valueFrom)
 
@@ -279,6 +323,51 @@ class OverlaySlider @JvmOverloads constructor(
         }
 
         return true
+    }
+
+    override fun onFling(
+        e1: MotionEvent?,
+        e2: MotionEvent,
+        velocityX: Float,
+        velocityY: Float
+    ): Boolean {
+
+        if (enableMomentum) {
+            val lastVelocity = ((lastMotionX - penultimateMotionX) / (lastMotionTime - penultimateMotionTime))
+                .coerceIn(-10F, 10F)
+            val distance = (lastVelocity.pow(2) / 2 / FRICTION / calculatedProgress) * (valueTo - valueFrom)
+            val flingStartValue = value
+            resetFlingAnimator()
+
+            ValueAnimator.ofFloat(
+                0F,
+                1.0F
+            ).apply {
+                flingValueAnimator = this
+                interpolator = AnimationUtils.decelerateInterpolator
+                duration = (lastVelocity / FRICTION).toLong().absoluteValue.coerceIn(200, 600)
+
+                addUpdateListener {
+                    flingFraction = animatedValue as Float
+                    value = (flingStartValue + flingFraction * distance * (if (lastVelocity < 0) -1 else 1))
+                        .coerceIn(valueFrom, valueTo)
+                    invalidate()
+                }
+
+                start()
+            }
+        }
+
+        if (e2.action == MotionEvent.ACTION_UP) {
+            onUp(e2)
+        }
+        return true
+    }
+
+    private fun resetFlingAnimator() {
+        flingValueAnimator?.cancel()
+        flingValueAnimator = null
+        shouldLockValue = true
     }
 
     private fun calculateOverShoot(progressMoved: Float) {
@@ -299,7 +388,8 @@ class OverlaySlider @JvmOverloads constructor(
             }
 
             pivotX = width - actualSidePadding
-            val squeezeFraction = ((triggeredOvershootXLeft - lastMotionX) / sideOverShootFingerBound).coerceIn(0F, 1F)
+            squeezeFraction = ((triggeredOvershootXLeft - lastMotionX) / sideOverShootFingerBound)
+                .coerceIn(0F, 1F)
             scaleX = lerp(1F, WIDTH_SCALE_FACTOR, squeezeFraction)
             scaleY = lerp(1F, HEIGHT_SCALE_FACTOR, squeezeFraction)
             translationX = lerp(0F, -sideOverShootTransition, squeezeFraction)
@@ -323,7 +413,8 @@ class OverlaySlider @JvmOverloads constructor(
             }
 
             pivotX = actualSidePadding
-            val squeezeFraction = ((lastMotionX - triggeredOvershootXRight) / sideOverShootFingerBound).coerceIn(0F, 1F)
+            squeezeFraction = ((lastMotionX - triggeredOvershootXRight) / sideOverShootFingerBound)
+                .coerceIn(0F, 1F)
             scaleX = lerp(1F, WIDTH_SCALE_FACTOR, squeezeFraction)
             scaleY = lerp(1F, HEIGHT_SCALE_FACTOR, squeezeFraction)
             translationX = lerp(0F, sideOverShootTransition, squeezeFraction)
@@ -393,67 +484,6 @@ class OverlaySlider @JvmOverloads constructor(
         }
     }
 
-    override fun onLongPress(e: MotionEvent) {}
-
-    private var flingFraction = 0F
-
-    override fun onFling(
-        e1: MotionEvent?,
-        e2: MotionEvent,
-        velocityX: Float,
-        velocityY: Float
-    ): Boolean {
-
-        if (enableMomentum) {
-            val lastVelocity =
-                ((lastMotionX - penultimateMotionX) / (lastMotionTime - penultimateMotionTime)).coerceIn(
-                    -10F,
-                    10F
-                )
-            val distance = (lastVelocity.pow(2) / 2 / FRICTION / calculatedProgress) * (valueTo - valueFrom)
-            val flingStartValue = value
-            resetAnimator()
-
-            ValueAnimator.ofFloat(
-                0F,
-                1.0F
-            ).apply {
-                flingValueAnimator = this
-                interpolator = AnimationUtils.decelerateInterpolator
-                duration = (lastVelocity / FRICTION).toLong().absoluteValue.coerceIn(200, 600)
-
-                addUpdateListener {
-                    flingFraction = animatedValue as Float
-                    value =
-                        (flingStartValue + flingFraction * distance * (if (lastVelocity < 0) -1 else 1)).coerceIn(
-                            valueFrom,
-                            valueTo
-                        )
-                    invalidate()
-                }
-
-                start()
-            }
-        }
-
-        if (e2.action == MotionEvent.ACTION_UP) {
-            onUp(e2)
-        }
-        return true
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        return if (gestureDetector.onTouchEvent(event)) {
-            true
-        } else if (event.action == MotionEvent.ACTION_UP) {
-            onUp(event)
-            true
-        } else {
-            super.onTouchEvent(event)
-        }
-    }
-
     interface EmphasizeListener {
         fun onEmphasizeProgressLeft(translationX: Float) {}
         fun onEmphasizeProgressRight(translationX: Float) {}
@@ -471,14 +501,6 @@ class OverlaySlider @JvmOverloads constructor(
     fun addEmphasizeListener(listener: EmphasizeListener) {
         emphasizeListenerList.add(listener)
     }
-
-    private fun resetAnimator() {
-        flingValueAnimator?.cancel()
-        flingValueAnimator = null
-        shouldLockValue = true
-    }
-
-    private var heightResizeFactor: Float = 2.25F
 
     companion object {
         const val TAG = "OverlaySlider"
