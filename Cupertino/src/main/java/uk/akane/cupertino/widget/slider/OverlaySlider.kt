@@ -221,8 +221,7 @@ class OverlaySlider @JvmOverloads constructor(
                 )
 
                 updateTrackBound(currentHeight, currentSidePadding)
-
-                updateListeners(1)
+                updateListeners()
                 invalidate()
             }
 
@@ -268,6 +267,8 @@ class OverlaySlider @JvmOverloads constructor(
                     0F,
                     1F - squeezeFraction
                 )
+
+                updateListeners()
             }
 
             start()
@@ -394,7 +395,7 @@ class OverlaySlider @JvmOverloads constructor(
             scaleY = lerp(1F, HEIGHT_SCALE_FACTOR, squeezeFraction)
             translationX = lerp(0F, -sideOverShootTransition, squeezeFraction)
 
-            updateListeners(3)
+            updateListeners()
 
         } else if (value + progressMoved >= valueTo || (lastMotionX > triggeredOvershootXRight && triggeredOvershootXRight != 0F)) {
             triggerOvershootTransitionMark = 2
@@ -419,7 +420,7 @@ class OverlaySlider @JvmOverloads constructor(
             scaleY = lerp(1F, HEIGHT_SCALE_FACTOR, squeezeFraction)
             translationX = lerp(0F, sideOverShootTransition, squeezeFraction)
 
-            updateListeners(2)
+            updateListeners()
 
         } else if (triggeredOvershootXLeft == 0F && triggeredOvershootXRight == 0F) {
             calculateNormalValue(progressMoved)
@@ -435,7 +436,7 @@ class OverlaySlider @JvmOverloads constructor(
         invalidate()
     }
 
-    fun updateListeners(triggerPlace: Int) {
+    fun updateListeners() {
         emphasizeListenerList.forEach {
 
             val emphasizeTransition = (actualSidePadding - currentSidePadding)
