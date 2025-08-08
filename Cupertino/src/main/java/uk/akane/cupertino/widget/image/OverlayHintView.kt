@@ -4,19 +4,17 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.alpha
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.getOverlayLayerColor
 import uk.akane.cupertino.widget.getShadeLayerColor
-import androidx.core.graphics.alpha
 
 class OverlayHintView @JvmOverloads constructor(
     context: Context,
@@ -28,16 +26,18 @@ class OverlayHintView @JvmOverloads constructor(
         isFilterBitmap = true
     }
 
-    private val overlayColorFilter =
-        PorterDuffColorFilter(resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN)
-    private val shadeColorFilter =
-        PorterDuffColorFilter(resources.getColor(R.color.white, null), PorterDuff.Mode.SRC_IN)
+    private val overlayColorFilter = PorterDuffColorFilter(
+        resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN
+    )
+    private val shadeColorFilter = PorterDuffColorFilter(
+        resources.getColor(R.color.white, null), PorterDuff.Mode.SRC_IN
+    )
 
     private var iconDrawable: Drawable?
     private val iconSize: Int
 
-    private var iconBitmap: Bitmap
-    private var iconCanvas: Canvas
+    private var iconBitmap: Bitmap? = null
+    private var iconCanvas: Canvas? = null
 
     private var lowestLuminous = 0
 
@@ -48,21 +48,30 @@ class OverlayHintView @JvmOverloads constructor(
             recycle()
         }
 
-        val bitmapWidth = if (iconSize == 0) iconDrawable!!.intrinsicWidth else iconSize
-        val bitmapHeight = if (iconSize == 0) iconDrawable!!.intrinsicHeight else iconSize
-        iconBitmap = createBitmap(bitmapWidth, bitmapHeight)
-        iconCanvas = Canvas(iconBitmap)
-
         lowestLuminous = resources.getShadeLayerColor(0).alpha
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        val bitmapWidth = if (iconSize == 0) iconDrawable?.intrinsicWidth ?: 0 else iconSize
+        val bitmapHeight = if (iconSize == 0) iconDrawable?.intrinsicHeight ?: 0 else iconSize
+        iconBitmap = createBitmap(bitmapWidth, bitmapHeight)
+        iconCanvas = Canvas(iconBitmap!!)
 
         iconDrawable?.let { updateBitmap(it) }
     }
 
-    fun updateBitmap(drawable: Drawable): Bitmap {
-        iconCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        iconBitmap?.recycle()
+        iconBitmap = null
+    }
+
+    fun updateBitmap(drawable: Drawable) {
+        iconCanvas!!.drawColor(0, PorterDuff.Mode.CLEAR)
         drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
-        drawable.draw(iconCanvas)
-        return iconBitmap
+        drawable.draw(iconCanvas!!)
     }
 
     var transformValue: Float = 0F
@@ -73,18 +82,21 @@ class OverlayHintView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val left = (width - iconBitmap.width) / 2f
-        val top = (height - iconBitmap.height) / 2f
+
+        val bitmap = iconBitmap ?: return
+
+        val left = (width - bitmap.width) / 2f
+        val top = (height - bitmap.height) / 2f
 
         paint.colorFilter = overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
         paint.alpha = 255
-        canvas.drawBitmap(iconBitmap, left, top, paint)
+        canvas.drawBitmap(bitmap, left, top, paint)
 
         paint.colorFilter = shadeColorFilter
         paint.blendMode = null
         paint.alpha = (lowestLuminous + transformValue * (255 - lowestLuminous)).toInt()
-        canvas.drawBitmap(iconBitmap, left, top, paint)
+        canvas.drawBitmap(bitmap, left, top, paint)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

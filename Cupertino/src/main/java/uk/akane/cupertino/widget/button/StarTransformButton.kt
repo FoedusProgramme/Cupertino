@@ -31,57 +31,73 @@ class StarTransformButton @JvmOverloads constructor(
 
     private var isChecked = false
     private var iconSize: Int = 28.dpToPx(context)
-    private var hollowStarBitmap: Bitmap
-    private var hollowStarDrawable: Drawable
-    private var hollowStarBitmapCanvas: Canvas
+    private var hollowStarBitmap: Bitmap? = null
+    private var hollowStarDrawable: Drawable? = null
+    private var hollowStarBitmapCanvas: Canvas? = null
 
-    private var filledStarBitmap: Bitmap
-    private var filledStarDrawable: Drawable
-    private var filledStarBitmapCanvas: Canvas
+    private var filledStarBitmap: Bitmap? = null
+    private var filledStarDrawable: Drawable? = null
+    private var filledStarBitmapCanvas: Canvas? = null
 
-    private var checkedBackgroundBitmap: Bitmap
-    private var checkedBackgroundDrawable: Drawable
-    private var checkedBackgroundBitmapCanvas: Canvas
+    private var checkedBackgroundBitmap: Bitmap? = null
+    private var checkedBackgroundDrawable: Drawable? = null
+    private var checkedBackgroundBitmapCanvas: Canvas? = null
 
     val backgroundPaint1 = Paint(Paint.ANTI_ALIAS_FLAG)
     val backgroundPaint2 = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val hollowStarPaintColorFilter =
-        PorterDuffColorFilter(getHollowStarColor(), PorterDuff.Mode.SRC_IN)
+    private val hollowStarPaintColorFilter = PorterDuffColorFilter(
+        getHollowStarColor(), PorterDuff.Mode.SRC_IN
+    )
     private val hollowStarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         colorFilter = hollowStarPaintColorFilter
     }
-
     private val filledStarPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val overlayColorFilter =
-        PorterDuffColorFilter(getOverlayLayerColor(), PorterDuff.Mode.SRC_IN)
-    private val shadeColorFilter =
-        PorterDuffColorFilter(getShadeLayerColor(), PorterDuff.Mode.SRC_IN)
+    private val overlayColorFilter = PorterDuffColorFilter(
+        getOverlayLayerColor(), PorterDuff.Mode.SRC_IN
+    )
+    private val shadeColorFilter = PorterDuffColorFilter(
+        getShadeLayerColor(), PorterDuff.Mode.SRC_IN
+    )
 
     init {
         isClickable = true
         setOnClickListener { toggle() }
+    }
 
-        hollowStarDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_star_hollow, null)!!
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        hollowStarDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_star_hollow, null)
         hollowStarBitmap = createBitmap(iconSize, iconSize)
-        hollowStarBitmapCanvas = Canvas(hollowStarBitmap)
+        hollowStarBitmapCanvas = Canvas(hollowStarBitmap!!)
 
-        hollowStarDrawable.setBounds(0, 0, iconSize, iconSize)
-        hollowStarDrawable.draw(hollowStarBitmapCanvas)
+        hollowStarDrawable?.setBounds(0, 0, iconSize, iconSize)
+        hollowStarDrawable?.draw(hollowStarBitmapCanvas!!)
 
-        filledStarDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_star_filled, null)!!
+        filledStarDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_star_filled, null)
         filledStarBitmap = createBitmap(iconSize, iconSize)
-        filledStarBitmapCanvas = Canvas(filledStarBitmap)
+        filledStarBitmapCanvas = Canvas(filledStarBitmap!!)
 
-        filledStarDrawable.setBounds(0, 0, iconSize, iconSize)
-        filledStarDrawable.draw(filledStarBitmapCanvas)
+        filledStarDrawable?.setBounds(0, 0, iconSize, iconSize)
+        filledStarDrawable?.draw(filledStarBitmapCanvas!!)
 
-        checkedBackgroundDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_star_outline, null)!!
+        checkedBackgroundDrawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_star_outline, null)
         checkedBackgroundBitmap = createBitmap(iconSize, iconSize)
-        checkedBackgroundBitmapCanvas = Canvas(checkedBackgroundBitmap)
+        checkedBackgroundBitmapCanvas = Canvas(checkedBackgroundBitmap!!)
 
-        checkedBackgroundDrawable.setBounds(0, 0, iconSize, iconSize)
-        checkedBackgroundDrawable.draw(checkedBackgroundBitmapCanvas)
+        checkedBackgroundDrawable?.setBounds(0, 0, iconSize, iconSize)
+        checkedBackgroundDrawable?.draw(checkedBackgroundBitmapCanvas!!)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        hollowStarBitmap?.recycle()
+        hollowStarBitmap = null
+        filledStarBitmap?.recycle()
+        filledStarBitmap = null
+        checkedBackgroundBitmap?.recycle()
+        checkedBackgroundBitmap = null
     }
 
     private var shouldDrawFilledStar = false
@@ -124,7 +140,7 @@ class StarTransformButton @JvmOverloads constructor(
     }
 
     private fun drawCheckedBackground(canvas: Canvas, paint: Paint, factor: Float) {
-        val bitmap = checkedBackgroundBitmap
+        val bitmap = checkedBackgroundBitmap ?: return
 
         val centerX = width / 2f
         val centerY = height / 2f
@@ -159,7 +175,7 @@ class StarTransformButton @JvmOverloads constructor(
     }
 
     private fun drawHollowStar(canvas: Canvas, paint: Paint, factor: Float) {
-        val bitmap = hollowStarBitmap
+        val bitmap = hollowStarBitmap ?: return
 
         val centerX = width / 2f
         val centerY = height / 2f
@@ -181,7 +197,7 @@ class StarTransformButton @JvmOverloads constructor(
     }
 
     private fun drawFilledStar(canvas: Canvas, paint: Paint, factor: Float) {
-        val bitmap = filledStarBitmap
+        val bitmap = filledStarBitmap ?: return
 
         val centerX = width / 2f
         val centerY = height / 2f

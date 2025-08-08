@@ -30,9 +30,9 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
     private var isChecked = false
     private var iconSize: Int = 28.dpToPx(context)
-    private var drawableBitmap: Bitmap
+    private var drawableBitmap: Bitmap? = null
     private var iconDrawable: Drawable? = null
-    private var drawableCanvas: Canvas
+    private var drawableCanvas: Canvas? = null
 
     val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -52,15 +52,24 @@ class OverlayBackgroundButton @JvmOverloads constructor(
             iconSize = getDimensionPixelSize(R.styleable.OverlayButton_iconSize, 0)
             recycle()
         }
-
-        drawableBitmap = createBitmap(iconSize, iconSize)
-        drawableCanvas = Canvas(drawableBitmap)
     }
 
-    fun updateBitmap(drawable: Drawable): Bitmap {
-        drawableCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        drawableBitmap = createBitmap(iconSize, iconSize)
+        drawableCanvas = Canvas(drawableBitmap!!)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        drawableBitmap?.recycle()
+        drawableBitmap = null
+    }
+
+    fun updateBitmap(drawable: Drawable): Bitmap? {
+        drawableCanvas!!.drawColor(0, PorterDuff.Mode.CLEAR)
         drawable.setBounds(0, 0, iconSize, iconSize)
-        drawable.draw(drawableCanvas)
+        drawable.draw(drawableCanvas!!)
         return drawableBitmap
     }
 
@@ -77,13 +86,16 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         paint.blendMode = BlendMode.OVERLAY
         canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
 
-        paint.color = ColorUtils.setAlphaComponent(resources.getShadeLayerColor(2), (4 + 20 * (1F - factor)).toInt())
+        paint.color = ColorUtils.setAlphaComponent(
+            resources.getShadeLayerColor(2),
+            (4 + 20 * (1F - factor)).toInt()
+        )
         paint.blendMode = null
         canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
     }
 
     private fun drawDrawable(canvas: Canvas, paint: Paint, factor: Float) {
-        val bitmap = drawableBitmap
+        val bitmap = drawableBitmap ?: return
 
         val centerX = width / 2f
         val centerY = height / 2f
@@ -107,7 +119,7 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         paint.colorFilter = shadeColorFilter
         paint.blendMode = null
         paint.alpha = (255 * ((1F - factor) * 0.55F + 0.45F)).toInt()
-        Log.d("TAG", "alpa: ${paint.alpha}")
+        Log.d(TAG, "alpha: ${paint.alpha}")
         canvas.drawBitmap(
             bitmap,
             null,
@@ -166,4 +178,7 @@ class OverlayBackgroundButton @JvmOverloads constructor(
             null
         )
 
+    companion object {
+        private const val TAG = "OverlayBackgroundButton"
+    }
 }

@@ -40,11 +40,12 @@ class OverlayButton @JvmOverloads constructor(
     private var isChecked = false
     private var iconDrawable: Drawable? = null
     private var iconSize: Int = 0
-    private val bitmap: Bitmap
-    private val bitmapCanvas: Canvas
 
-    private val transformBitmap: Bitmap
-    private val transformCanvas: Canvas
+    private var bitmap: Bitmap? = null
+    private var bitmapCanvas: Canvas? = null
+
+    private var transformBitmap: Bitmap? = null
+    private var transformCanvas: Canvas? = null
 
     val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         isFilterBitmap = true
@@ -65,28 +66,39 @@ class OverlayButton @JvmOverloads constructor(
             recycle()
         }
 
-        bitmap = createBitmap(iconSize, iconSize)
-        bitmapCanvas = Canvas(bitmap)
-
-        transformBitmap = createBitmap(iconSize, iconSize)
-        transformCanvas = Canvas(transformBitmap)
-
         iconDrawable?.callback = this
     }
 
-    fun updateBitmap(drawable: Drawable): Bitmap {
-        transformCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
-        transformCanvas.drawBitmap(bitmap, 0F, 0F, null)
-        bitmapCanvas.drawColor(0, PorterDuff.Mode.CLEAR)
-        drawable.setBounds(0, 0, iconSize, iconSize)
-        drawable.draw(bitmapCanvas)
-        return bitmap
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        bitmap = createBitmap(iconSize, iconSize)
+        bitmapCanvas = Canvas(bitmap!!)
+        transformBitmap = createBitmap(iconSize, iconSize)
+        transformCanvas = Canvas(transformBitmap!!)
     }
 
-    private val overlayColorFilter =
-        PorterDuffColorFilter(resources.getOverlayLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN)
-    private val shadeColorFilter =
-        PorterDuffColorFilter(resources.getShadeLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN)
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        bitmap?.recycle()
+        bitmap = null
+        transformBitmap?.recycle()
+        transformBitmap = null
+    }
+
+    fun updateBitmap(drawable: Drawable) {
+        transformCanvas!!.drawColor(0, PorterDuff.Mode.CLEAR)
+        transformCanvas!!.drawBitmap(bitmap!!, 0F, 0F, null)
+        bitmapCanvas!!.drawColor(0, PorterDuff.Mode.CLEAR)
+        drawable.setBounds(0, 0, iconSize, iconSize)
+        drawable.draw(bitmapCanvas!!)
+    }
+
+    private val overlayColorFilter = PorterDuffColorFilter(
+        resources.getOverlayLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN
+    )
+    private val shadeColorFilter = PorterDuffColorFilter(
+        resources.getShadeLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN
+    )
     private val holdingColorFilter = PorterDuffColorFilter(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 
     private var isTransform = false
@@ -100,10 +112,10 @@ class OverlayButton @JvmOverloads constructor(
         val top = (height - size) / 2
 
         if (isTransform) {
-            drawIcon(transformPaint, canvas, transformBitmap, left, top)
+            drawIcon(transformPaint, canvas, transformBitmap!!, left, top)
         }
 
-        drawIcon(paint, canvas, bitmap, left, top)
+        drawIcon(paint, canvas, bitmap!!, left, top)
     }
 
     private fun drawIcon(
@@ -178,7 +190,7 @@ class OverlayButton @JvmOverloads constructor(
     override fun isChecked(): Boolean = isChecked
 
     override fun toggle() {
-        Log.d("TAG", "toggle!")
+        Log.d(TAG, "toggle!")
         isChecked = !isChecked
         animateChecked()
     }
@@ -205,6 +217,7 @@ class OverlayButton @JvmOverloads constructor(
     }
 
     companion object {
+        private const val TAG = "OverlayButton"
         private val CHECKED_STATE_SET = intArrayOf(android.R.attr.state_checked)
     }
 }
