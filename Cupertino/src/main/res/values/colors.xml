@@ -22,4 +22,7 @@
     <color name="tertiaryOverlayShadeColor">#1AFFFFFF</color>
     <color name="tertiaryOverlayColor">#0DFFFFFF</color>
 
+    <!-- Blend View -->
+    <color name="frontShadeColor">#40000000</color>
+
 </resources>

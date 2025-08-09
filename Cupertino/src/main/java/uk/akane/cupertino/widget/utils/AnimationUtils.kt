@@ -26,6 +26,7 @@ object AnimationUtils {
     const val LONG_DURATION = 500L
 
     val addXfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+    val overlayXfermode = PorterDuffXfermode(PorterDuff.Mode.OVERLAY)
 
     inline fun <reified T> createValAnimator(
         fromValue: T,
