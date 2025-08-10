@@ -3,13 +3,16 @@ package uk.akane.cupertino.widget.image
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewOutlineProvider
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
@@ -27,6 +30,10 @@ class SimpleImageView @JvmOverloads constructor(
         isFilterBitmap = true
     }
 
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+    }
+
     private var imageBitmap: Bitmap? = null
     private var cornerRadius: Int = 0
 
@@ -38,6 +45,8 @@ class SimpleImageView @JvmOverloads constructor(
             context.withStyledAttributes(it, R.styleable.SimpleImageView, defStyleAttr, 0) {
                 val drawableResId = getResourceId(R.styleable.SimpleImageView_drawable, 0)
                 cornerRadius = getDimensionPixelSize(R.styleable.SimpleImageView_cornerRadius, 0)
+                strokePaint.strokeWidth = getDimensionPixelSize(R.styleable.SimpleImageView_strokeWidth, 0).toFloat()
+                strokePaint.color = getColor(R.styleable.SimpleImageView_strokeColor, 0)
                 if (drawableResId != 0) {
                     val drawable = AppCompatResources.getDrawable(context, drawableResId)
                     drawable?.let { d ->
@@ -74,13 +83,44 @@ class SimpleImageView @JvmOverloads constructor(
     }
 
     fun setImageBitmap(bitmap: Bitmap?) {
-        if (imageBitmap.areBitmapsVaguelySame(bitmap)) {
+        if (!imageBitmap.areBitmapsVaguelySame(bitmap)) {
             imageBitmap?.recycle()
             imageBitmap = bitmap
             calculateDstRect()
             invalidate()
         }
     }
+
+    fun setImageDrawable(drawable: Drawable?) {
+        if (drawable == null) return
+        setImageBitmap(drawableToBitmap(drawable))
+    }
+
+    fun setImageUri(uri: Uri) {
+        try {
+            val drawable: Drawable? = when (uri.scheme) {
+                "content", "file" -> {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    if (inputStream != null) {
+                        Drawable.createFromStream(inputStream, uri.toString()).also {
+                            inputStream.close()
+                        }
+                    } else null
+                }
+                "android.resource" -> {
+                    AppCompatResources.getDrawable(context, uri.toString().substringAfterLast("/").toIntOrNull() ?: 0)
+                }
+                else -> null
+            }
+
+            drawable?.let {
+                setImageBitmap(drawableToBitmap(it))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
 
     private fun calculateDstRect() {
         val bmp = imageBitmap ?: return
@@ -108,11 +148,24 @@ class SimpleImageView @JvmOverloads constructor(
 
         bezierPath.reset()
         bezierPath.continuousRoundRect(dstRect, cornerRadius.toFloat())
+
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setPath(bezierPath)
+            }
+        }
+
+    }
+
+    fun updateCornerRadius(radius: Int) {
+        cornerRadius = radius
+        calculateDstRect()
     }
 
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        canvas.drawPath(bezierPath, strokePaint)
         canvas.clipPath(bezierPath)
         imageBitmap?.let { bmp ->
             canvas.drawBitmap(bmp, null, dstRect, imagePaint)
