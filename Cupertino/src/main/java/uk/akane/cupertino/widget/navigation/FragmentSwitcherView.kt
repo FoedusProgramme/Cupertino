@@ -196,7 +196,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
             }
         }
 
-        private companion object CREATOR : Parcelable.Creator<SavedState> {
+        companion object CREATOR : Parcelable.Creator<SavedState> {
             override fun createFromParcel(parcel: Parcel) = SavedState(parcel)
             override fun newArray(size: Int) = arrayOfNulls<SavedState>(size)
         }
