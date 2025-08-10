@@ -8,6 +8,7 @@ import android.graphics.PorterDuffXfermode
 import android.os.Build
 import android.view.Choreographer
 import android.view.animation.AccelerateInterpolator
+import android.view.animation.Animation
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.PathInterpolator
@@ -36,8 +37,8 @@ object AnimationUtils {
         isArgb: Boolean = false,
         crossinline doOnEnd: (() -> Unit) = {},
         crossinline changedListener: (animatedValue: T) -> Unit,
-    ) {
-        when (T::class) {
+    ) : ValueAnimator {
+        return when (T::class) {
             Int::class -> {
                 if (!isArgb)
                     ValueAnimator.ofInt(fromValue as Int, toValue as Int)
@@ -164,6 +165,17 @@ object AnimationUtils {
             currentValue = targetValue
             listener.onValueUpdate(this)
         }
+    }
+
+    fun Animation.doOnEnd(action: () -> Unit): Animation {
+        setAnimationListener(object : Animation.AnimationListener {
+            override fun onAnimationStart(animation: Animation) {}
+            override fun onAnimationEnd(animation: Animation) {
+                action()
+            }
+            override fun onAnimationRepeat(animation: Animation) {}
+        })
+        return this
     }
 
     fun interpolateColor(startColor: Int, endColor: Int, fraction: Float): Int {

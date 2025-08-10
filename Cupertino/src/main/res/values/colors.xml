@@ -25,4 +25,7 @@
     <!-- Blend View -->
     <color name="frontShadeColor">#40000000</color>
 
+    <!-- Fragment Switcher-->
+    <color name="surfaceColor">#FFFFFF</color>
+
 </resources>

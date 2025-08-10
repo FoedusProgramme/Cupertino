@@ -4,4 +4,7 @@
     <!-- Blend View -->
     <color name="frontShadeColor">#66000000</color>
 
+    <!-- Fragment Switcher-->
+    <color name="surfaceColor">#000000</color>
+
 </resources>

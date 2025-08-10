@@ -3,6 +3,7 @@ package uk.akane.cupertino.widget.image
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Path
@@ -32,6 +33,7 @@ class SimpleImageView @JvmOverloads constructor(
 
     private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
+        color = Color.TRANSPARENT
     }
 
     private var imageBitmap: Bitmap? = null
@@ -160,6 +162,7 @@ class SimpleImageView @JvmOverloads constructor(
     fun updateCornerRadius(radius: Int) {
         cornerRadius = radius
         calculateDstRect()
+        invalidate()
     }
 
 
