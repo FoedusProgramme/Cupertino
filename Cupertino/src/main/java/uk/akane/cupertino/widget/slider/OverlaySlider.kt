@@ -205,7 +205,7 @@ class OverlaySlider @JvmOverloads constructor(
             if (isShrink) 0F else 1F
         ).apply {
             transformValueAnimator = this
-            interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingStandardInterpolator
             duration = TRANSFORM_DURATION
 
             addUpdateListener {
@@ -240,7 +240,7 @@ class OverlaySlider @JvmOverloads constructor(
             0F
         ).apply {
             overshootValueAnimator = this
-            interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingStandardInterpolator
             duration = TRANSFORM_DURATION
 
             val startScaleX = scaleX

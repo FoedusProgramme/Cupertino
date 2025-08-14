@@ -163,7 +163,7 @@ class OverlayButton @JvmOverloads constructor(
             1F
         ).apply {
             transformValueAnimator = this
-            interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingStandardInterpolator
             duration = 200L
 
             doOnStart {

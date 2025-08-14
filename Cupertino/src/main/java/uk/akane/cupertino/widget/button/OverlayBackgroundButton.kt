@@ -148,7 +148,7 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         ).apply {
             valueAnimator = this
             duration = 300L
-            interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingStandardInterpolator
 
             addUpdateListener {
                 transformFactor = animatedValue as Float

@@ -2,7 +2,7 @@ package uk.akane.cupertino.widget.utils
 
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
-import android.content.res.Resources
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.os.Build
@@ -13,11 +13,11 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.PathInterpolator
 import androidx.core.animation.doOnEnd
-import uk.akane.cupertino.R
 
 object AnimationUtils {
 
-    val easingInterpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+    val easingStandardInterpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+
     val decelerateInterpolator: Interpolator = DecelerateInterpolator(1.7f)
     val accelerateInterpolator: Interpolator = AccelerateInterpolator(1.7f)
 
@@ -33,7 +33,7 @@ object AnimationUtils {
         fromValue: T,
         toValue: T,
         duration: Long = FAST_DURATION,
-        interpolator: TimeInterpolator = easingInterpolator,
+        interpolator: TimeInterpolator = easingStandardInterpolator,
         isArgb: Boolean = false,
         crossinline doOnEnd: (() -> Unit) = {},
         crossinline changedListener: (animatedValue: T) -> Unit,

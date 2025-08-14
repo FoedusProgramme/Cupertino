@@ -23,7 +23,7 @@
     <color name="tertiaryOverlayColor">#0DFFFFFF</color>
 
     <!-- Blend View -->
-    <color name="frontShadeColor">#40000000</color>
+    <color name="frontShadeColor">#59000000</color>
 
     <!-- Fragment Switcher-->
     <color name="surfaceColor">#FFFFFF</color>

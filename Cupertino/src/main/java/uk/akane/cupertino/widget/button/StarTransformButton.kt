@@ -30,7 +30,7 @@ class StarTransformButton @JvmOverloads constructor(
 ) : ShrinkableView(context, attrs, defStyleAttr), Checkable {
 
     private var isChecked = false
-    private var iconSize: Int = 28.dpToPx(context)
+    private var iconSize: Int = 29.dpToPx(context)
     private var hollowStarBitmap: Bitmap? = null
     private var hollowStarDrawable: Drawable? = null
     private var hollowStarBitmapCanvas: Canvas? = null
@@ -333,7 +333,7 @@ class StarTransformButton @JvmOverloads constructor(
             if (isChecked) 0F else 1.0F
         ).apply {
             duration = 100L
-            interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingStandardInterpolator
 
             doOnStart {
                 shouldDrawCheckedBackground = true
@@ -356,7 +356,7 @@ class StarTransformButton @JvmOverloads constructor(
             1.0F
         ).apply {
             duration = 100L
-            interpolator = AnimationUtils.easingInterpolator
+            interpolator = AnimationUtils.easingStandardInterpolator
 
             doOnStart {
                 shouldDrawHollowStar = true
