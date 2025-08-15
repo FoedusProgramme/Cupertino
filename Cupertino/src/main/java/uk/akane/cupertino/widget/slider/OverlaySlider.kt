@@ -367,7 +367,7 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     private fun calculateOverShoot(progressMoved: Float) {
-        if (value + progressMoved <= valueFrom || lastMotionX < triggeredOvershootXLeft) {
+        if (value + progressMoved <= valueFrom || (lastMotionX < triggeredOvershootXLeft && triggeredOvershootXLeft != 0F)) {
             triggerOvershootTransitionMark = 1
 
             if (value != valueFrom) {
