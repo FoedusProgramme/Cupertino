@@ -31,11 +31,23 @@
         <attr name="momentum" format="boolean" />
         <attr name="overshoot" format="boolean" />
         <attr name="resizeFactor" format="float" />
+        <attr name="sidePadding" format="dimension" />
     </declare-styleable>
 
     <declare-styleable name="OverlayBackgroundButton">
         <attr name="icon" />
         <attr name="iconSize" />
+    </declare-styleable>
+
+    <declare-styleable name="AnimatedVectorButton">
+        <attr name="icon" />
+        <attr name="iconSize" />
+    </declare-styleable>
+
+    <declare-styleable name="StateAnimatedVectorButton">
+        <attr name="icon" />
+        <attr name="iconSize" />
+        <attr name="iconState" format="reference" />
     </declare-styleable>
 
     <declare-styleable name="OverlayHintView">

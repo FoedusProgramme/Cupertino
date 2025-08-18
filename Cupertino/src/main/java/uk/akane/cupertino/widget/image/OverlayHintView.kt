@@ -1,20 +1,17 @@
 package uk.akane.cupertino.widget.image
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
+import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.View
-import androidx.core.graphics.alpha
-import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.getOverlayLayerColor
-import uk.akane.cupertino.widget.getShadeLayerColor
+import uk.akane.cupertino.widget.lerp
+import uk.akane.cupertino.widget.utils.AnimationUtils
 
 class OverlayHintView @JvmOverloads constructor(
     context: Context,
@@ -22,24 +19,14 @@ class OverlayHintView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        isFilterBitmap = true
+    private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = AnimationUtils.overlayXfermode
     }
 
-    private val overlayColorFilter = PorterDuffColorFilter(
-        resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN
-    )
-    private val shadeColorFilter = PorterDuffColorFilter(
-        resources.getColor(R.color.white, null), PorterDuff.Mode.SRC_IN
-    )
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var iconDrawable: Drawable?
     private val iconSize: Int
-
-    private var iconBitmap: Bitmap? = null
-    private var iconCanvas: Canvas? = null
-
-    private var lowestLuminous = 0
 
     init {
         context.obtainStyledAttributes(attrs, R.styleable.OverlayHintView).apply {
@@ -47,31 +34,6 @@ class OverlayHintView @JvmOverloads constructor(
             iconSize = getDimensionPixelSize(R.styleable.OverlayHintView_iconSize, 0)
             recycle()
         }
-
-        lowestLuminous = resources.getShadeLayerColor(0).alpha
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-
-        val bitmapWidth = if (iconSize == 0) iconDrawable?.intrinsicWidth ?: 0 else iconSize
-        val bitmapHeight = if (iconSize == 0) iconDrawable?.intrinsicHeight ?: 0 else iconSize
-        iconBitmap = createBitmap(bitmapWidth, bitmapHeight)
-        iconCanvas = Canvas(iconBitmap!!)
-
-        iconDrawable?.let { updateBitmap(it) }
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        iconBitmap?.recycle()
-        iconBitmap = null
-    }
-
-    fun updateBitmap(drawable: Drawable) {
-        iconCanvas!!.drawColor(0, PorterDuff.Mode.CLEAR)
-        drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
-        drawable.draw(iconCanvas!!)
     }
 
     var transformValue: Float = 0F
@@ -83,31 +45,48 @@ class OverlayHintView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val bitmap = iconBitmap ?: return
+        val overlayLayer = canvas.saveLayer(null, overlayPaint)
+        iconDrawable?.apply {
+            setTint(resources.getOverlayLayerColor(0))
+            draw(canvas)
+        }
+        canvas.restoreToCount(overlayLayer)
 
-        val left = (width - bitmap.width) / 2f
-        val top = (height - bitmap.height) / 2f
+        paint.alpha = lerp(114.75F, 216.75F, transformValue).toInt()
+        val normalLayer = canvas.saveLayer(null, paint)
+        iconDrawable?.apply {
+            setTint(resources.getOverlayLayerColor(3))
+            draw(canvas)
+        }
+        canvas.restoreToCount(normalLayer)
 
-        paint.colorFilter = overlayColorFilter
-        paint.blendMode = BlendMode.OVERLAY
-        paint.alpha = 255
-        canvas.drawBitmap(bitmap, left, top, paint)
+    }
 
-        paint.colorFilter = shadeColorFilter
-        paint.blendMode = null
-        paint.alpha = (lowestLuminous + transformValue * (255 - lowestLuminous)).toInt()
-        canvas.drawBitmap(bitmap, left, top, paint)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+
+        iconDrawable?.let { d ->
+            val (width, height) = calculateScaledSize()
+
+            d.setBounds(
+                (w - width) / 2,
+                (h - height) / 2,
+                (w + width) / 2,
+                (h + height) / 2
+            )
+        }
+    }
+
+    fun playAnim() {
+        (iconDrawable as AnimatedVectorDrawable).start()
+        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
         val heightMode = MeasureSpec.getMode(heightMeasureSpec)
 
-        val drawableWidth = iconDrawable?.intrinsicWidth ?: 0
-        val drawableHeight = iconDrawable?.intrinsicHeight ?: 0
-
-        val desiredWidth = if (iconSize != 0) iconSize else drawableWidth
-        val desiredHeight = if (iconSize != 0) iconSize else drawableHeight
+        val (desiredWidth, desiredHeight) = calculateScaledSize()
 
         val measuredWidth = when (widthMode) {
             MeasureSpec.EXACTLY -> MeasureSpec.getSize(widthMeasureSpec)
@@ -122,7 +101,36 @@ class OverlayHintView @JvmOverloads constructor(
             MeasureSpec.UNSPECIFIED -> desiredHeight
             else -> desiredHeight
         }
+
         setMeasuredDimension(measuredWidth, measuredHeight)
+    }
+
+    private fun calculateScaledSize(): Pair<Int, Int> {
+        val drawableWidth = iconDrawable?.intrinsicWidth ?: 0
+        val drawableHeight = iconDrawable?.intrinsicHeight ?: 0
+
+        if (drawableWidth <= 0 || drawableHeight <= 0) {
+            return 0 to 0
+        }
+
+        if (iconSize > 0) {
+            val scale: Float
+            val width: Int
+            val height: Int
+
+            if (drawableWidth >= drawableHeight) {
+                scale = iconSize.toFloat() / drawableHeight.toFloat()
+                height = iconSize
+                width = (drawableWidth * scale).toInt()
+            } else {
+                scale = iconSize.toFloat() / drawableWidth.toFloat()
+                width = iconSize
+                height = (drawableHeight * scale).toInt()
+            }
+            return width to height
+        }
+
+        return drawableWidth to drawableHeight
     }
 
 }

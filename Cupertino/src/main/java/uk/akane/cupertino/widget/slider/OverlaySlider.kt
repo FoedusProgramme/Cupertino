@@ -58,7 +58,7 @@ class OverlaySlider @JvmOverloads constructor(
 
     private val progressOverlayColor = resources.getColor(R.color.primaryOverlayColor, null)
     private val progressShadeInitialColor = resources.getColor(R.color.primaryOverlayShadeColor, null)
-    private val progressShadeFinalColor = resources.getColor(R.color.standardOverlayColor, null)
+    private val progressShadeFinalColor = resources.getColor(R.color.standardOverlayShadeColor, null)
     private var progressCurrentColor = 0
 
     private var enableMomentum = true
@@ -82,6 +82,7 @@ class OverlaySlider @JvmOverloads constructor(
             enableMomentum = getBoolean(R.styleable.OverlaySlider_momentum, true)
             enableOverShoot = getBoolean(R.styleable.OverlaySlider_overshoot, false)
             heightResizeFactor = getFloat(R.styleable.OverlaySlider_resizeFactor, HEIGHT_RESIZE_FACTOR_DEFAULT)
+            actualSidePadding = getDimensionPixelSize(R.styleable.OverlaySlider_sidePadding, 16.dpToPx(context)).toFloat()
             recycle()
         }
     }
@@ -89,7 +90,7 @@ class OverlaySlider @JvmOverloads constructor(
     private val actualHeight: Float = 7.5F.dpToPx(context)
     private var currentHeight: Float = 0F
 
-    private val actualSidePadding: Float = 16F.dpToPx(context)
+    private var actualSidePadding: Float = 0F
     private var currentSidePadding: Float = 0F
     private val sideOverShootFingerBound: Float = 100F.dpToPx(context)
     private val sideOverShootTransition: Float = 8F.dpToPx(context)
@@ -376,6 +377,7 @@ class OverlaySlider @JvmOverloads constructor(
             }
 
             triggeredOvershootXLeft = if (triggeredOvershootXLeft == 0F) {
+                emphasizeListenerList.forEach { it.onEmphasizeStartLeft() }
                 lastMotionX
             } else if (lastMotionX >= triggeredOvershootXLeft) {
                 0F
@@ -401,6 +403,7 @@ class OverlaySlider @JvmOverloads constructor(
             }
 
             triggeredOvershootXRight = if (triggeredOvershootXRight == 0F) {
+                emphasizeListenerList.forEach { it.onEmphasizeStartRight() }
                 lastMotionX
             } else if (lastMotionX <= triggeredOvershootXRight) {
                 0F
@@ -483,6 +486,8 @@ class OverlaySlider @JvmOverloads constructor(
     interface EmphasizeListener {
         fun onEmphasizeProgressLeft(translationX: Float) {}
         fun onEmphasizeProgressRight(translationX: Float) {}
+        fun onEmphasizeStartLeft() {}
+        fun onEmphasizeStartRight() {}
         fun onEmphasizeAll(fraction: Float) {}
         fun onEmphasizeVertical(translationX: Float, translationY: Float) {}
     }

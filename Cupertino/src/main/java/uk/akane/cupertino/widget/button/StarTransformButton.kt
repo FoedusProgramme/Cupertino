@@ -13,6 +13,7 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.widget.Checkable
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
@@ -30,7 +31,7 @@ class StarTransformButton @JvmOverloads constructor(
 ) : ShrinkableView(context, attrs, defStyleAttr), Checkable {
 
     private var isChecked = false
-    private var iconSize: Int = 29.dpToPx(context)
+    private var iconSize: Int = 30.dpToPx(context)
     private var hollowStarBitmap: Bitmap? = null
     private var hollowStarDrawable: Drawable? = null
     private var hollowStarBitmapCanvas: Canvas? = null
@@ -338,6 +339,7 @@ class StarTransformButton @JvmOverloads constructor(
             doOnStart {
                 shouldDrawCheckedBackground = true
                 shouldDrawNormalBackground = !isChecked
+                if (isChecked) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
             }
             addUpdateListener {
                 backgroundTransformFraction = animatedValue as Float

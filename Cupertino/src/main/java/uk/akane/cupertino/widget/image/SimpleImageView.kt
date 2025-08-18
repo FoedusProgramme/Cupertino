@@ -12,6 +12,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.ViewOutlineProvider
 import androidx.appcompat.content.res.AppCompatResources
@@ -20,6 +21,8 @@ import uk.akane.cupertino.R
 import androidx.core.content.withStyledAttributes
 import uk.akane.cupertino.widget.areBitmapsVaguelySame
 import uk.akane.cupertino.widget.continuousRoundRect
+import uk.akane.cupertino.widget.dpToPx
+import uk.akane.cupertino.widget.lerp
 
 class SimpleImageView @JvmOverloads constructor(
     context: Context,
@@ -153,11 +156,16 @@ class SimpleImageView @JvmOverloads constructor(
 
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
-                outline.setPath(bezierPath)
+                Log.d("TAG", "getOutline! transformation: $transformation")
+                val path = Path(bezierPath)
+                path.offset(0F, lerp(0F, 24F, transformation))
+                outline.setPath(path)
             }
         }
 
     }
+
+    var transformation = 0F
 
     fun updateCornerRadius(radius: Int) {
         cornerRadius = radius
