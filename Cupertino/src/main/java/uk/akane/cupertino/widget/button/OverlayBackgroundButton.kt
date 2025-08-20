@@ -119,7 +119,6 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         paint.colorFilter = shadeColorFilter
         paint.blendMode = null
         paint.alpha = (255 * ((1F - factor) * 0.55F + 0.45F)).toInt()
-        Log.d(TAG, "alpha: ${paint.alpha}")
         canvas.drawBitmap(
             bitmap,
             null,
@@ -167,16 +166,21 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
     override fun toggle() {
         isChecked = !isChecked
+        onCheckedChangeListener?.onCheckedChanged(this, isChecked)
         animateChecked(isChecked)
     }
 
     override fun isChecked(): Boolean = isChecked
 
-    private fun getDrawableColor(): Int =
-        resources.getColor(
-            R.color.white,
-            null
-        )
+    fun interface OnCheckedChangeListener {
+        fun onCheckedChanged(button: OverlayBackgroundButton, isChecked: Boolean)
+    }
+
+    private var onCheckedChangeListener: OnCheckedChangeListener? = null
+
+    fun setOnCheckedChangeListener(listener: OnCheckedChangeListener) {
+        this.onCheckedChangeListener = listener
+    }
 
     companion object {
         private const val TAG = "OverlayBackgroundButton"

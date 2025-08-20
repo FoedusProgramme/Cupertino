@@ -2,6 +2,8 @@ package uk.akane.cupertino.widget.utils
 
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
+import android.graphics.BlendMode
+import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode

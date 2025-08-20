@@ -156,7 +156,6 @@ class SimpleImageView @JvmOverloads constructor(
 
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
-                Log.d("TAG", "getOutline! transformation: $transformation")
                 val path = Path(bezierPath)
                 path.offset(0F, lerp(0F, 24F, transformation))
                 outline.setPath(path)
