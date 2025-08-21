@@ -219,6 +219,7 @@ class BlendView @JvmOverloads constructor(
     }
 
     fun stopRotationAnimation() {
+        if (!running) return
         running = false
         Choreographer.getInstance().removeFrameCallback(this)
     }
