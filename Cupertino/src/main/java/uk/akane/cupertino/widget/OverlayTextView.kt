@@ -47,8 +47,6 @@ class OverlayTextView @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        Log.d(TAG, "onDraw")
-
         paint.blendMode = BlendMode.OVERLAY
         textColorField.set(this, resources.getOverlayLayerColor(textViewLayer))
         super.onDraw(canvas)
