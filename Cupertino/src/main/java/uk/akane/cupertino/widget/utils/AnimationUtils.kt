@@ -15,6 +15,8 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.PathInterpolator
 import androidx.core.animation.doOnEnd
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 
 object AnimationUtils {
 
@@ -22,6 +24,8 @@ object AnimationUtils {
 
     val decelerateInterpolator: Interpolator = DecelerateInterpolator(1.7f)
     val accelerateInterpolator: Interpolator = AccelerateInterpolator(1.7f)
+    val linearOutSlowInInterpolator = LinearOutSlowInInterpolator()
+    val fastOutSlowInInterpolator = FastOutSlowInInterpolator()
 
     const val FASTEST_DURATION = 150L
     const val FAST_DURATION = 256L
