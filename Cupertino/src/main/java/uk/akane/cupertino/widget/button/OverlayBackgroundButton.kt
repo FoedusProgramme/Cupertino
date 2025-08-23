@@ -161,6 +161,7 @@ class OverlayBackgroundButton @JvmOverloads constructor(
     override fun setChecked(checked: Boolean) {
         if (isChecked != checked) {
             isChecked = checked
+            animateChecked(isChecked)
         }
     }
 

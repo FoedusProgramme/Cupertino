@@ -9,10 +9,12 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.os.Build
 import android.view.Choreographer
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
+import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import androidx.core.animation.doOnEnd
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
@@ -26,6 +28,8 @@ object AnimationUtils {
     val accelerateInterpolator: Interpolator = AccelerateInterpolator(1.7f)
     val linearOutSlowInInterpolator = LinearOutSlowInInterpolator()
     val fastOutSlowInInterpolator = FastOutSlowInInterpolator()
+    val accelerateDecelerateInterpolator = AccelerateDecelerateInterpolator()
+    val linearInterpolator = LinearInterpolator()
 
     const val FASTEST_DURATION = 150L
     const val FAST_DURATION = 256L
@@ -41,6 +45,7 @@ object AnimationUtils {
         duration: Long = FAST_DURATION,
         interpolator: TimeInterpolator = easingStandardInterpolator,
         isArgb: Boolean = false,
+        startInstant: Boolean = true,
         crossinline doOnEnd: (() -> Unit) = {},
         crossinline changedListener: (animatedValue: T) -> Unit,
     ) : ValueAnimator {
@@ -64,7 +69,9 @@ object AnimationUtils {
             this.doOnEnd {
                 doOnEnd()
             }
-            start()
+            if (startInstant) {
+                start()
+            }
         }
     }
 
