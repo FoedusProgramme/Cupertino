@@ -233,6 +233,9 @@ class BlendView @JvmOverloads constructor(
     private val frameIntervalNanos = 1_000_000_000L / 30  // 30fps
     private var running = false
 
+    val isRunning: Boolean
+        get() = running
+
     override fun doFrame(frameTimeNanos: Long) {
         if (!running) return
         if (frameTimeNanos - lastFrameTimeNanos >= frameIntervalNanos) {

@@ -16,6 +16,7 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
+import androidx.core.animation.doOnCancel
 import androidx.core.animation.doOnEnd
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
@@ -47,6 +48,7 @@ object AnimationUtils {
         isArgb: Boolean = false,
         startInstant: Boolean = true,
         crossinline doOnEnd: (() -> Unit) = {},
+        crossinline doOnCancel: (() -> Unit) = {},
         crossinline changedListener: (animatedValue: T) -> Unit,
     ) : ValueAnimator {
         return when (T::class) {
@@ -68,6 +70,9 @@ object AnimationUtils {
             }
             this.doOnEnd {
                 doOnEnd()
+            }
+            this.doOnCancel {
+                doOnCancel()
             }
             if (startInstant) {
                 start()
