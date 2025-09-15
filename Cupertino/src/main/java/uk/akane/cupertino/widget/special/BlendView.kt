@@ -10,10 +10,13 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.graphics.PointF
 import android.graphics.RectF
 import android.graphics.RenderEffect
+import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.net.Uri
+import android.os.Build
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.WindowManager
@@ -21,6 +24,7 @@ import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.ImageSwitcher
 import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
@@ -57,6 +61,7 @@ class BlendView @JvmOverloads constructor(
     private val overlayPaint = Paint().apply {
         blendMode = BlendMode.SOFT_LIGHT
         alpha = 30
+        isDither = true
     }
 
     companion object {
@@ -64,7 +69,7 @@ class BlendView @JvmOverloads constructor(
         const val FULL_BLUR_RADIUS: Float = 120F
         const val SHALLOW_BLUR_RADIUS: Float = 60F
         const val CYCLE: Int = 360
-        const val SATURATION_FACTOR: Float = 1.7F
+        const val SATURATION_FACTOR: Float = 2F
         const val BRIGHTNESS_FACTOR: Float = 0F
         const val PICTURE_SIZE: Int = 60
     }

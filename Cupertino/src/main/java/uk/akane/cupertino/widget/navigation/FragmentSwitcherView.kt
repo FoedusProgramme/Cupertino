@@ -46,8 +46,8 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private val subFragmentStack: MutableList<MutableList<Fragment>> = mutableListOf()
     private var currentBaseFragment: Int = 0
 
-    private val fadeInAnimation = AndroidAnimationUtils.loadAnimation(context, android.R.anim.fade_in)
-    private val fadeOutAnimation = AndroidAnimationUtils.loadAnimation(context, android.R.anim.fade_out)
+    private val fadeInAnimation = AndroidAnimationUtils.loadAnimation(context, R.anim.fade_in)
+    private val fadeOutAnimation = AndroidAnimationUtils.loadAnimation(context, R.anim.fade_out)
 
     private var surfaceColor: Int = 0
 
@@ -212,6 +212,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     fun addFragmentToCurrentStack(
         fragment: Fragment
     ) {
+        if (addValueAnimator?.isRunning == true) return
         // State 1: This sub-fragment is being added to
         // DEFAULT_CONTAINER.
         //
@@ -705,6 +706,54 @@ class FragmentSwitcherView @JvmOverloads constructor(
             }
         }
     }
+
+    private var removeValueAnimator: ValueAnimator? = null
+
+    fun popBackTopFragmentIfExists(): Boolean {
+        if (removeValueAnimator?.isRunning == true) return false
+
+        val stack = subFragmentStack[currentBaseFragment]
+        if (stack.isEmpty()) return false
+
+        val fm = fragmentManager ?: return false
+        val list = subFragmentStack[currentBaseFragment]
+
+        targetFragment = if (list.size - 2 >= 0) list[list.size - 2] else baseFragments[currentBaseFragment]
+        targetFragmentIndex = if (list.size - 2 >= 0) list.size - 2 else -1
+        currentFragment = list[list.size - 1]
+        currentFragmentIndex = list.size - 1
+
+        targetContainer = if (activeContainer == ContainerType.DEFAULT_CONTAINER) containerAppend else containerDefault
+        currentContainer = getContainer(activeContainer)
+
+        fm.beginTransaction()
+            .show(targetFragment!!)
+            .commit()
+
+        currentContainer?.translationX = 0F
+        currentContainer?.elevation = 10F.dpToPx(context)
+        currentContainer?.setBackgroundColor(surfaceColor)
+        targetContainer?.translationX = 0F
+
+        animationLoadState = LoadState.ALREADY_LOADED
+
+        removeValueAnimator?.cancel()
+        removeValueAnimator = AnimationUtils.createValAnimator<Float>(
+            currentContainer!!.translationX,
+            width.toFloat(),
+            doOnEnd = {
+                isAnimationProperlyFinished = true
+                onAnimationFinished()
+                removeValueAnimator = null
+            }
+        ) {
+            currentContainer!!.translationX = it
+            targetContainer!!.translationX = -(width.toFloat() - it) / 3F
+        }
+
+        return true
+    }
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
