@@ -9,6 +9,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import androidx.core.animation.doOnEnd
@@ -18,6 +19,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
+import uk.akane.cupertino.widget.runOnContentLoaded
 import uk.akane.cupertino.widget.utils.AnimationUtils
 import uk.akane.cupertino.widget.utils.AnimationUtils.doOnEnd
 import kotlin.math.absoluteValue
@@ -255,34 +257,50 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
         fm.beginTransaction()
             .add(endContainer.id, fragment, Uuid.random().toString())
-            .runOnCommit {
-                addValueAnimator?.cancel()
-                addValueAnimator = null
-
-                addValueAnimator = AnimationUtils.createValAnimator(
-                    width.toFloat(),
-                    0F,
-                    doOnEnd = {
-                        // Reset end container.
-                        endContainer.elevation = 0F
-                        endContainer.setBackgroundColor(0)
-
-                        // Hide container under.
-                        fm.beginTransaction()
-                            .hide(currentFragment)
-                            .commit()
-
-                        startContainer.translationX = width.toFloat()
-                        activeContainer = nextContainerType
-
-                        addValueAnimator = null
-                    }
-                ) {
-                    startContainer.translationX = -(width.toFloat() - it) / 3F
-                    endContainer.translationX = it
-                }
+            .runOnContentLoaded(fragment) {
+                addAnimation(
+                    startContainer,
+                    endContainer,
+                    currentFragment,
+                    fm,
+                    nextContainerType
+                )
             }
             .commit()
+    }
+
+    private fun addAnimation(
+        startContainer: View,
+        endContainer: View,
+        currentFragment: Fragment,
+        fm: FragmentManager,
+        nextContainerType: ContainerType
+    ) {
+        addValueAnimator?.cancel()
+        addValueAnimator = null
+
+        addValueAnimator = AnimationUtils.createValAnimator(
+            width.toFloat(),
+            0F,
+            doOnEnd = {
+                // Reset end container.
+                endContainer.elevation = 0F
+                endContainer.setBackgroundColor(0)
+
+                // Hide container under.
+                fm.beginTransaction()
+                    .hide(currentFragment)
+                    .commit()
+
+                startContainer.translationX = width.toFloat()
+                activeContainer = nextContainerType
+
+                addValueAnimator = null
+            }
+        ) {
+            startContainer.translationX = -(width.toFloat() - it) / 3F
+            endContainer.translationX = it
+        }
     }
 
     /**

@@ -5,7 +5,10 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Path
 import android.graphics.RectF
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentTransaction
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.navigation.SwitcherPostponeFragment
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun Int.dpToPx(context: Context): Int =
@@ -126,4 +129,19 @@ inline fun lerp(start: Float, stop: Float, amount: Float): Float {
 
 fun Bitmap?.areBitmapsVaguelySame(b1: Bitmap?): Boolean {
     return b1 != null && this != null && b1.width == this.width && b1.height == this.height && b1.getColor(0, 0) == this.getColor(0, 0)
+}
+
+
+fun FragmentTransaction.runOnContentLoaded(
+    fragment: Fragment,
+    action: () -> Unit
+): FragmentTransaction {
+    return if (fragment is SwitcherPostponeFragment && fragment.isPostponed) {
+        fragment.addOnContentLoadedListener(action)
+        this
+    } else {
+        this.runOnCommit {
+            action()
+        }
+    }
 }
