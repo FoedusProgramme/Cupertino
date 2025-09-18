@@ -13,13 +13,16 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.widget.Checkable
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
+import com.google.android.material.color.utilities.ColorUtils
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.alphaFromArgb
 import uk.akane.cupertino.widget.utils.AnimationUtils
 import uk.akane.cupertino.widget.base.ShrinkableView
 import uk.akane.cupertino.widget.dpToPx
@@ -44,8 +47,13 @@ class StarTransformButton @JvmOverloads constructor(
     private var checkedBackgroundDrawable: Drawable? = null
     private var checkedBackgroundBitmapCanvas: Canvas? = null
 
-    val backgroundPaint1 = Paint(Paint.ANTI_ALIAS_FLAG)
+    val backgroundPaint1 = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = getBackgroundOverlayLayerColor()
+    }
     val backgroundPaint2 = Paint(Paint.ANTI_ALIAS_FLAG)
+    val backgroundPaint3 = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = getBackgroundShadeLayerColor()
+    }
 
     private val hollowStarPaintColorFilter = PorterDuffColorFilter(
         getHollowStarColor(), PorterDuff.Mode.SRC_IN
@@ -114,7 +122,7 @@ class StarTransformButton @JvmOverloads constructor(
         super.onDraw(canvas)
 
         if (shouldDrawNormalBackground) {
-            drawBackground(canvas, backgroundPaint1, backgroundTransformFraction)
+            drawBackground(canvas, backgroundPaint1, backgroundPaint3)
         }
 
         if (shouldDrawCheckedBackground) {
@@ -128,16 +136,29 @@ class StarTransformButton @JvmOverloads constructor(
         }
     }
 
-    private fun drawBackground(canvas: Canvas, paint: Paint, fraction: Float) {
-        paint.alpha = (255 * fraction).toInt()
+    private var alpha = 1F
 
-        paint.color = getBackgroundOverlayLayerColor()
-        paint.blendMode = BlendMode.OVERLAY
-        canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
+    override fun setAlpha(alpha: Float) {
+        this.alpha = alpha
 
-        paint.color = getBackgroundShadeLayerColor()
-        paint.blendMode = null
-        canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
+        val alphaInt = (alpha * 255).toInt()
+        backgroundPaint1.alpha = (alpha * getBackgroundOverlayLayerColor().alphaFromArgb()).toInt()
+        backgroundPaint2.alpha = alphaInt
+        backgroundPaint3.alpha = (alpha * getBackgroundShadeLayerColor().alphaFromArgb()).toInt()
+        hollowStarPaint.alpha = alphaInt
+        filledStarPaint.alpha = alphaInt
+
+        invalidate()
+    }
+
+    override fun getAlpha(): Float = alpha
+
+    private fun drawBackground(canvas: Canvas, paint1: Paint, paint2: Paint) {
+        paint1.blendMode = BlendMode.OVERLAY
+        canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint1)
+
+        paint2.blendMode = null
+        canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint2)
     }
 
     private fun drawCheckedBackground(canvas: Canvas, paint: Paint, factor: Float) {
@@ -153,8 +174,6 @@ class StarTransformButton @JvmOverloads constructor(
 
         val left = centerX - drawWidth / 2f
         val top = centerY - drawHeight / 2f
-
-        paint.alpha = (255 * (1F - factor)).toInt()
 
         paint.colorFilter = overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
@@ -198,6 +217,7 @@ class StarTransformButton @JvmOverloads constructor(
     }
 
     private fun drawFilledStar(canvas: Canvas, paint: Paint, factor: Float) {
+        Log.d("TAG", "drawingFilledStar: Alpha: ")
         val bitmap = filledStarBitmap ?: return
 
         val centerX = width / 2f

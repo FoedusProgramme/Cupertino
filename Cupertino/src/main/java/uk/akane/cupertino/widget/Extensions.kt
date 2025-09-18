@@ -145,3 +145,6 @@ fun FragmentTransaction.runOnContentLoaded(
         }
     }
 }
+
+/** Returns the alpha component of a color in ARGB format.  */
+fun Int.alphaFromArgb(): Int = (this shr 24) and 255
