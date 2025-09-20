@@ -29,10 +29,10 @@ class OverlayDivider @JvmOverloads constructor(
     }
 
     @Px
-    private val rectWidth = 36.dpToPx(context)
+    private val rectWidth = 40.dpToPx(context)
 
     @Px
-    private val rectHeight = 5.25F.dpToPx(context)
+    private val rectHeight = 5F.dpToPx(context)
 
     @Px
     private val cornerRadius = 3.dpToPx(context)

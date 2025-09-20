@@ -138,7 +138,6 @@ class OverlayButton @JvmOverloads constructor(
         super.drawableStateChanged()
         iconDrawable?.apply {
             state = drawableState
-            isHolding = false
             updateBitmap(this)
         }
     }
@@ -179,7 +178,6 @@ class OverlayButton @JvmOverloads constructor(
                 val animatedAlpha = animatedValue as Float
                 transformPaint.alpha = (255 * (1F - animatedAlpha)).toInt()
                 paint.alpha = (255 * animatedAlpha).toInt()
-                Log.d("TAG", "tp: ${transformPaint.alpha}, p: ${paint.alpha}")
                 invalidate()
             }
 
@@ -201,16 +199,25 @@ class OverlayButton @JvmOverloads constructor(
         return state
     }
 
+    private val holdRunnable = Runnable {
+        Log.d("TAG", "posted1")
+        isHolding = true
+        invalidate()
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                isHolding = true
-                invalidate()
+                Log.d("TAG", "posted")
+                postDelayed(holdRunnable, 100)
             }
-            MotionEvent.ACTION_UP -> {
-                isHolding = false
-                invalidate()
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                removeCallbacks(holdRunnable)
+                if (isHolding) {
+                    isHolding = false
+                    invalidate()
+                }
             }
         }
         return super.onTouchEvent(event)

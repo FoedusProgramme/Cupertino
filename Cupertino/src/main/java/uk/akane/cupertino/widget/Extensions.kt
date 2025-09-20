@@ -1,10 +1,12 @@
 package uk.akane.cupertino.widget
 
+import android.animation.TimeInterpolator
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Path
 import android.graphics.RectF
+import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
 import uk.akane.cupertino.R
@@ -148,3 +150,39 @@ fun FragmentTransaction.runOnContentLoaded(
 
 /** Returns the alpha component of a color in ARGB format.  */
 fun Int.alphaFromArgb(): Int = (this shr 24) and 255
+
+fun View.fadOutAnimation(
+    duration: Long = 300,
+    visibility: Int = View.INVISIBLE,
+    interpolator: TimeInterpolator,
+    completion: (() -> Unit)? = null
+) {
+    animate()
+        .alpha(0f)
+        .setDuration(duration)
+        .setInterpolator(interpolator)
+        .withEndAction {
+            this.visibility = visibility
+            completion?.let {
+                it()
+            }
+        }
+}
+
+fun View.fadInAnimation(
+    duration: Long = 300,
+    completion: (() -> Unit)? = null,
+    interpolator: TimeInterpolator
+) {
+    alpha = 0f
+    visibility = View.VISIBLE
+    animate()
+        .alpha(1f)
+        .setDuration(duration)
+        .setInterpolator(interpolator)
+        .withEndAction {
+            completion?.let {
+                it()
+            }
+        }
+}
