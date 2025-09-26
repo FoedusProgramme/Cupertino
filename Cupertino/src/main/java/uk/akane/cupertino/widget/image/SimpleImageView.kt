@@ -81,15 +81,8 @@ class SimpleImageView @JvmOverloads constructor(
         calculateDstRect()
     }
 
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        imageBitmap?.recycle()
-        imageBitmap = null
-    }
-
     fun setImageBitmap(bitmap: Bitmap?) {
         if (!imageBitmap.areBitmapsVaguelySame(bitmap)) {
-            imageBitmap?.recycle()
             imageBitmap = bitmap
             calculateDstRect()
             invalidate()
