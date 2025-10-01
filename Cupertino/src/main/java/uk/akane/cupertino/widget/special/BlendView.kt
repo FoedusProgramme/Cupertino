@@ -10,13 +10,10 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
-import android.graphics.PointF
 import android.graphics.RectF
 import android.graphics.RenderEffect
-import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.net.Uri
-import android.os.Build
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.WindowManager
@@ -24,7 +21,6 @@ import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.ImageSwitcher
 import android.widget.ImageView
-import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
@@ -179,11 +175,13 @@ class BlendView @JvmOverloads constructor(
                         updateImageViews(enhancedBitmap)
                     }
                 }
+                previousBitmap?.recycle()
                 previousBitmap = originalBitmap
             } else if (originalBitmap == null) {
                 withContext(Dispatchers.Main) {
                     clearImageViews()
                 }
+                previousBitmap?.recycle()
                 previousBitmap = null
             }
         }

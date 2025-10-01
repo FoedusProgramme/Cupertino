@@ -2,9 +2,6 @@ package uk.akane.cupertino.widget.utils
 
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
-import android.graphics.BlendMode
-import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.os.Build
@@ -20,6 +17,11 @@ import androidx.core.animation.doOnCancel
 import androidx.core.animation.doOnEnd
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 object AnimationUtils {
 
@@ -182,6 +184,246 @@ object AnimationUtils {
             }
             currentValue = targetValue
             listener.onValueUpdate(this)
+        }
+    }
+
+    open class SpringAnimator(
+        initialValue: Float,
+        stiffness: Float = 300f,
+        dampingRatio: Float = 1f,
+        valueThreshold: Float = 0.5f,
+        minValue: Float = -Float.MAX_VALUE,
+        maxValue: Float = Float.MAX_VALUE,
+        private val listener: Animator.ValueUpdateListener<Float>
+    ) : Animator<Float> {
+        private val spring = Spring(k = stiffness, m = 1f, zeta = dampingRatio)
+
+        final override var initialValue: Float = initialValue
+            private set
+        final override var targetValue: Float = initialValue
+            private set
+        final override var currentValue: Float = initialValue
+            private set
+        final override var currentVelocity: Float = 0f
+            private set
+
+        override var startDelay: Long = 0L
+
+        final override var isRunning = false
+            private set
+
+        var stiffness: Float = stiffness
+            set(value) {
+                field = value
+                spring.setK(stiffness)
+            }
+
+        var dampingRatio: Float = dampingRatio
+            set(value) {
+                field = value
+                spring.setZeta(dampingRatio)
+            }
+
+        var valueThreshold: Float = valueThreshold
+
+        private var frameCallback: Choreographer.FrameCallback? = null
+        private val choreographer = Choreographer.getInstance()
+        private var currentCallbackIncrement = 0
+
+        override fun start() {
+            currentCallbackIncrement++
+            val currentCallback = currentCallbackIncrement
+
+            val durationScale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ValueAnimator.getDurationScale()
+            } else {
+                1f
+            }
+
+            cancel()
+            isRunning = true
+            var startTime = 0L
+
+            val initialValue = initialValue
+            val targetValue = targetValue
+            val initialVelocity = currentVelocity
+            val valueThreshold = valueThreshold
+            val delay = (startDelay * 1_000_000L * durationScale).toLong()
+
+            frameCallback = Choreographer.FrameCallback { time ->
+                if (currentCallback != currentCallbackIncrement) {
+                    return@FrameCallback
+                }
+
+                if (startTime == 0L) {
+                    startTime = time
+                }
+
+                val playTime = time - startTime
+                if (playTime < delay) {
+                    choreographer.postFrameCallback(frameCallback)
+                    return@FrameCallback
+                }
+
+                val springState = spring.stateAt(
+                    t = playTime / 1_000_000_000f / durationScale,
+                    x0 = initialValue,
+                    x1 = targetValue,
+                    v0 = initialVelocity,
+                    tolerance = valueThreshold
+                )
+                if (springState.isAtEquilibrium) {
+                    end()
+                } else {
+                    currentValue = springState.x
+                    currentVelocity = springState.v
+                    listener.onValueUpdate(this)
+                    choreographer.postFrameCallback(frameCallback)
+                }
+            }
+
+            choreographer.postFrameCallback(frameCallback)
+        }
+
+        override fun animateTo(targetValue: Float) {
+            initialValue = currentValue
+            this.targetValue = targetValue
+            start()
+        }
+
+        fun animateTo(targetValue: Float, velocity: Float) {
+            initialValue = currentValue
+            this.targetValue = targetValue
+            currentVelocity = velocity
+            start()
+        }
+
+        override fun snapTo(targetValue: Float) {
+            currentCallbackIncrement++
+            cancel()
+            currentValue = targetValue
+            this.targetValue = targetValue
+            currentVelocity = 0f
+            listener.onValueUpdate(this)
+        }
+
+        override fun cancel() {
+            isRunning = false
+            if (frameCallback != null) {
+                choreographer.removeFrameCallback(frameCallback)
+            }
+        }
+
+        override fun end() {
+            isRunning = false
+            if (frameCallback != null) {
+                choreographer.removeFrameCallback(frameCallback)
+            }
+            currentValue = targetValue
+            currentVelocity = 0f
+            listener.onValueUpdate(this)
+        }
+    }
+
+    internal class Spring(
+        private var k: Float,
+        private var m: Float,
+        private var zeta: Float
+    ) {
+        private var omega0 = sqrt(k / m)
+
+        // angular frequency
+        private var omegaD = when {
+            zeta < 1f -> omega0 * sqrt(1 - zeta * zeta)
+            zeta > 1f -> omega0 * sqrt(zeta * zeta - 1)
+            else -> 0f
+        }
+
+        fun setK(k: Float) {
+            this.k = k
+            omega0 = sqrt(k / m)
+        }
+
+        fun setM(m: Float) {
+            this.m = m
+            omega0 = sqrt(k / m)
+        }
+
+        fun setZeta(zeta: Float) {
+            this.zeta = zeta
+            omegaD = when {
+                zeta < 1f -> omega0 * sqrt(1 - zeta * zeta)
+                zeta > 1f -> omega0 * sqrt(zeta * zeta - 1)
+                else -> 0f
+            }
+        }
+
+        init {
+            require(zeta > 0) { "Damping ratio must be greater than 0" }
+        }
+
+        fun stateAt(t: Float, x0: Float, x1: Float, v0: Float, tolerance: Float): SpringState {
+            val zeta = zeta
+            val omega0 = omega0
+            val omegaD = omegaD
+            val deltaX = x0 - x1
+
+            return when {
+                // Critically damped (zeta == 1)
+                zeta == 1f -> {
+                    val expTerm = exp(-omega0 * t)
+                    val c1 = (v0 + omega0 * deltaX) * t
+                    val x = x1 + expTerm * (deltaX + c1)
+                    val v = expTerm * (v0 - omega0 * c1)
+                    createState(x, x1, v, tolerance)
+                }
+
+                // Underdamped (0 < zeta < 1)
+                zeta < 1 -> {
+                    val c1 = zeta * omega0
+                    val expTerm = exp(-c1 * t)
+                    val c2 = omegaD * t
+                    val cosTerm = cos(c2)
+                    val sinTerm = sin(c2)
+                    val c3 = (v0 + c1 * deltaX) / omegaD
+                    val x = x1 + expTerm * (deltaX * cosTerm + c3 * sinTerm)
+                    val v = expTerm * (v0 * cosTerm - (c1 * c3 + deltaX * omegaD) * sinTerm)
+                    createState(x, x1, v, tolerance)
+                }
+
+                // Overdamped (zeta > 1)
+                else -> {
+                    val c1 = zeta * omega0
+                    val ca = c1 - omegaD
+                    val cb = c1 + omegaD
+                    val expTerm1 = exp(-ca * t)
+                    val expTerm2 = exp(-cb * t)
+                    val doubleOmegaD = 2 * omegaD
+                    val a = (v0 + cb * deltaX) / doubleOmegaD
+                    val b = (v0 - ca * deltaX) / doubleOmegaD
+                    val x = x1 + a * expTerm1 + b * expTerm2
+                    val v = a * -ca * expTerm1 + b * -cb * expTerm2
+                    createState(x, x1, v, tolerance)
+                }
+            }
+        }
+
+        private fun createState(x: Float, x1: Float, v: Float, tolerance: Float): SpringState {
+            val isAtEquilibrium = abs(x - x1) < tolerance && abs(v) < tolerance * VELOCITY_THRESHOLD_MULTIPLIER
+            return SpringState(x, v, isAtEquilibrium)
+        }
+
+        class SpringState(
+            val x: Float,
+            val v: Float,
+            val isAtEquilibrium: Boolean
+        )
+
+        private companion object {
+            // This multiplier is used to calculate the velocity threshold given a certain value threshold.
+            // The idea is that if it takes >= 1 frame to move the value threshold amount, then the velocity
+            // is a reasonable threshold.
+            const val VELOCITY_THRESHOLD_MULTIPLIER = 1000.0 / 16.0
         }
     }
 

@@ -11,7 +11,6 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.util.Log
 import android.widget.Checkable
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap

@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.util.AttributeSet
-import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
 import org.lsposed.hiddenapibypass.HiddenApiBypass
