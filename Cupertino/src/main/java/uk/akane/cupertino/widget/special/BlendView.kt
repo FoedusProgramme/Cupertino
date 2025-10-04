@@ -189,16 +189,15 @@ class BlendView @JvmOverloads constructor(
 
     fun setImageBitmap(bitmap: Bitmap?) {
         CoroutineScope(Dispatchers.IO).launch {
-            val originalBitmap = bitmap
-            if (originalBitmap != null && !originalBitmap.areBitmapsVaguelySame(previousBitmap)) {
-                enhanceBitmap(originalBitmap).let { enhancedBitmap ->
+            if (bitmap != null && !bitmap.areBitmapsVaguelySame(previousBitmap)) {
+                enhanceBitmap(bitmap).let { enhancedBitmap ->
                     withContext(Dispatchers.Main) {
                         updateImageViews(enhancedBitmap)
                     }
                 }
                 previousBitmap?.recycle()
-                previousBitmap = originalBitmap
-            } else if (originalBitmap == null) {
+                previousBitmap = bitmap
+            } else if (bitmap == null) {
                 withContext(Dispatchers.Main) {
                     clearImageViews()
                 }
