@@ -118,18 +118,14 @@ class StateAnimatedVectorButton @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_UP) {
-            if (!isFirstTime) {
-                activeDrawable = if (activeDrawable == normalDrawable) {
-                    stateDrawable ?: normalDrawable
-                } else {
-                    normalDrawable
-                }
-            }
-            isFirstTime = false
-            invalidate()
-            (activeDrawable as AnimatedVectorDrawable).start()
-        }
         return super.onTouchEvent(event)
     }
+
+    fun playAnimation(normal: Boolean) {
+        activeDrawable = if (normal) normalDrawable else stateDrawable
+        isFirstTime = false
+        invalidate()
+        (activeDrawable as AnimatedVectorDrawable).start()
+    }
+
 }
