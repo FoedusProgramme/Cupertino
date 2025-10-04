@@ -168,6 +168,7 @@ class SimpleImageView @JvmOverloads constructor(
         super.onDraw(canvas)
         canvas.drawPath(bezierPath, strokePaint)
         canvas.clipPath(bezierPath)
+        if (imageBitmap?.isRecycled == true) return
         imageBitmap?.let { bmp ->
             canvas.drawBitmap(bmp, null, dstRect, imagePaint)
         }
