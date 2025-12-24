@@ -176,6 +176,10 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     override fun onDown(e: MotionEvent): Boolean {
+        if (!isTracking) {
+            isTracking = true
+            valueChangeListeners.forEach { it.onStartTracking(this) }
+        }
         transformSize(false)
         return true
     }
@@ -191,6 +195,10 @@ class OverlaySlider @JvmOverloads constructor(
         triggeredOvershootXRight = 0F
         transformSize(true)
         if (enableOverShoot) resetOverShootSize()
+        if (isTracking) {
+            isTracking = false
+            valueChangeListeners.forEach { it.onStopTracking(this) }
+        }
     }
 
     private fun cancelTransform() {
@@ -298,6 +306,7 @@ class OverlaySlider @JvmOverloads constructor(
     private var triggeredOvershootXLeft = 0F
     private var triggeredOvershootXRight = 0F
     private var triggerOvershootTransitionMark = 0
+    private var isTracking = false
 
     override fun onScroll(
         e1: MotionEvent?,
@@ -320,6 +329,7 @@ class OverlaySlider @JvmOverloads constructor(
             calculateNormalValue(progressMoved)
         }
 
+        notifyValueChanged(true)
         return true
     }
 
@@ -350,6 +360,7 @@ class OverlaySlider @JvmOverloads constructor(
                     value = (flingStartValue + flingFraction * distance * (if (lastVelocity < 0) -1 else 1))
                         .coerceIn(valueFrom, valueTo)
                     invalidate()
+                    notifyValueChanged(true)
                 }
 
                 start()
@@ -493,14 +504,24 @@ class OverlaySlider @JvmOverloads constructor(
     }
 
     private val emphasizeListenerList: MutableList<EmphasizeListener> = mutableListOf()
+    private val valueChangeListeners: MutableList<ValueChangeListener> = mutableListOf()
 
     override fun onDetachedFromWindow() {
         emphasizeListenerList.clear()
+        valueChangeListeners.clear()
         super.onDetachedFromWindow()
     }
 
     fun addEmphasizeListener(listener: EmphasizeListener) {
         emphasizeListenerList.add(listener)
+    }
+
+    fun addValueChangeListener(listener: ValueChangeListener) {
+        valueChangeListeners.add(listener)
+    }
+
+    private fun notifyValueChanged(fromUser: Boolean) {
+        valueChangeListeners.forEach { it.onValueChanged(this, value, fromUser) }
     }
 
     companion object {
@@ -512,6 +533,12 @@ class OverlaySlider @JvmOverloads constructor(
         const val WIDTH_SCALE_FACTOR = 1.025F
         const val TRANSFORM_DURATION = 250L
         const val FRICTION = 0.01F
+    }
+
+    interface ValueChangeListener {
+        fun onStartTracking(slider: OverlaySlider) {}
+        fun onValueChanged(slider: OverlaySlider, value: Float, fromUser: Boolean) {}
+        fun onStopTracking(slider: OverlaySlider) {}
     }
 
 }
