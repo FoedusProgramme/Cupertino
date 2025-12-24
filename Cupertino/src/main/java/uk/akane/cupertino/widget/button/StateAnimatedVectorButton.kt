@@ -122,12 +122,14 @@ class StateAnimatedVectorButton @JvmOverloads constructor(
     }
 
     fun playAnimation(normal: Boolean) {
-        if (normal && activeDrawable == normalDrawable) return
-        if (!normal && activeDrawable == stateDrawable) return
+        if (!isFirstTime) {
+            if (normal && activeDrawable == normalDrawable) return
+            if (!normal && activeDrawable == stateDrawable) return
+        }
         activeDrawable = if (normal) normalDrawable else stateDrawable
-        isFirstTime = false
         invalidate()
         (activeDrawable as AnimatedVectorDrawable).start()
+        isFirstTime = false
     }
 
 }
