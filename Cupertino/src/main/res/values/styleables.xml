@@ -62,4 +62,11 @@
         <attr name="strokeColor" />
     </declare-styleable>
 
+    <declare-styleable name="OverlayPillButton">
+        <attr name="icon" />
+        <attr name="iconSize" />
+        <attr name="cornerRadius" />
+    </declare-styleable>
+
+
 </resources>

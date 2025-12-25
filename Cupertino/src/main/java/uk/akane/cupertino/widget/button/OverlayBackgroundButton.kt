@@ -48,13 +48,16 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
         context.obtainStyledAttributes(attrs, R.styleable.OverlayBackgroundButton).apply {
             iconDrawable = getDrawable(R.styleable.OverlayButton_icon)
-            iconSize = getDimensionPixelSize(R.styleable.OverlayButton_iconSize, 0)
+            iconSize = getDimensionPixelSize(R.styleable.OverlayButton_iconSize, iconSize)
             recycle()
         }
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        if (iconSize <= 0) {
+            return
+        }
         drawableBitmap = createBitmap(iconSize, iconSize)
         drawableCanvas = Canvas(drawableBitmap!!)
     }
@@ -66,9 +69,10 @@ class OverlayBackgroundButton @JvmOverloads constructor(
     }
 
     fun updateBitmap(drawable: Drawable): Bitmap? {
-        drawableCanvas!!.drawColor(0, PorterDuff.Mode.CLEAR)
+        val canvas = drawableCanvas ?: return null
+        canvas.drawColor(0, PorterDuff.Mode.CLEAR)
         drawable.setBounds(0, 0, iconSize, iconSize)
-        drawable.draw(drawableCanvas!!)
+        drawable.draw(canvas)
         return drawableBitmap
     }
 
