@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -41,6 +42,8 @@ class OverlayBackgroundButton @JvmOverloads constructor(
         PorterDuffColorFilter(resources.getOverlayLayerColor(0), PorterDuff.Mode.SRC_IN)
     private val shadeColorFilter =
         PorterDuffColorFilter(resources.getOverlayLayerColor(3), PorterDuff.Mode.SRC_IN)
+
+    private var renderAlpha = 1F
 
     init {
         isClickable = true
@@ -85,13 +88,17 @@ class OverlayBackgroundButton @JvmOverloads constructor(
     }
 
     private fun drawBackground(canvas: Canvas, paint: Paint, factor: Float) {
-        paint.color = resources.getOverlayLayerColor(2)
+        if (renderAlpha <= 0F) return
+        val overlayColor = resources.getOverlayLayerColor(2)
+        val overlayAlpha = (Color.alpha(overlayColor) * renderAlpha).toInt()
+        paint.color = ColorUtils.setAlphaComponent(overlayColor, overlayAlpha)
         paint.blendMode = BlendMode.OVERLAY
         canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
 
+        val shadeAlpha = ((4 + 20 * (1F - factor)) * renderAlpha).toInt()
         paint.color = ColorUtils.setAlphaComponent(
             resources.getShadeLayerColor(2),
-            (4 + 20 * (1F - factor)).toInt()
+            shadeAlpha
         )
         paint.blendMode = null
         canvas.drawCircle(width / 2F, height / 2F, iconSize / 2F, paint)
@@ -111,7 +118,8 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
         paint.colorFilter = overlayColorFilter
         paint.blendMode = BlendMode.OVERLAY
-        paint.alpha = (255 * ((1F - factor) * 0.25F + 0.75F)).toInt()
+        paint.alpha =
+            (255 * ((1F - factor) * 0.25F + 0.75F) * renderAlpha).toInt()
         canvas.drawBitmap(
             bitmap,
             null,
@@ -121,7 +129,8 @@ class OverlayBackgroundButton @JvmOverloads constructor(
 
         paint.colorFilter = shadeColorFilter
         paint.blendMode = null
-        paint.alpha = (255 * ((1F - factor) * 0.55F + 0.45F)).toInt()
+        paint.alpha =
+            (255 * ((1F - factor) * 0.55F + 0.45F) * renderAlpha).toInt()
         canvas.drawBitmap(
             bitmap,
             null,
@@ -137,6 +146,14 @@ class OverlayBackgroundButton @JvmOverloads constructor(
             updateBitmap(this)
         }
     }
+
+    override fun setAlpha(alpha: Float) {
+        renderAlpha = alpha.coerceIn(0F, 1F)
+        super.setAlpha(1F)
+        invalidate()
+    }
+
+    override fun getAlpha(): Float = renderAlpha
 
     private var valueAnimator: ValueAnimator? = null
 
