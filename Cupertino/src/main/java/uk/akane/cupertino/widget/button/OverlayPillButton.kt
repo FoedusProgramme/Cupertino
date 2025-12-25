@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -57,6 +58,7 @@ class OverlayPillButton @JvmOverloads constructor(
 
     private val checkedOverlayColor = resources.getOverlayLayerColor(0)
     private val checkedShadeColor = resources.getShadeLayerColor(0)
+    private var renderAlpha = 1F
 
     init {
         isClickable = true
@@ -111,16 +113,19 @@ class OverlayPillButton @JvmOverloads constructor(
     }
 
     private fun drawBackground(canvas: Canvas, paint: Paint, factor: Float) {
+        if (renderAlpha <= 0F) return
         // Base overlay layer (glass)
-        paint.alpha = 255
-        paint.color = resources.getOverlayLayerColor(2)
+        val baseOverlayColor = resources.getOverlayLayerColor(2)
+        val baseOverlayAlpha = (Color.alpha(baseOverlayColor) * renderAlpha).toInt()
+        paint.color = ColorUtils.setAlphaComponent(baseOverlayColor, baseOverlayAlpha)
         paint.blendMode = BlendMode.OVERLAY
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
 
         // Shade layer (depth).
+        val shadeAlpha = ((6 + (18 * (1F - factor))) * renderAlpha).toInt()
         paint.color = ColorUtils.setAlphaComponent(
             resources.getShadeLayerColor(2),
-            (6 + (18 * (1F - factor))).toInt()
+            shadeAlpha
         )
         paint.blendMode = null
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
@@ -131,7 +136,7 @@ class OverlayPillButton @JvmOverloads constructor(
     }
 
     private fun drawSelectedLayer(canvas: Canvas, factor: Float) {
-        val selectedAlpha = (255 * factor).toInt()
+        if (renderAlpha <= 0F) return
 
         val bitmap = drawableBitmap
         val dst = if (bitmap != null) {
@@ -147,35 +152,39 @@ class OverlayPillButton @JvmOverloads constructor(
         }
 
         // Overlay layer composited with OVERLAY blend, like the star background.
-        bgPaint.alpha = selectedAlpha
-        bgPaint.color = checkedOverlayColor
+        val overlayAlpha =
+            (Color.alpha(checkedOverlayColor) * factor * renderAlpha).toInt().coerceIn(0, 255)
+        val cutoutAlpha = (255 * factor * renderAlpha).toInt().coerceIn(0, 255)
+        if (overlayAlpha <= 0) return
+        bgPaint.color = ColorUtils.setAlphaComponent(checkedOverlayColor, overlayAlpha)
         bgPaint.blendMode = null
         val overlayLayerId = canvas.saveLayer(rect, overlayCompositePaint)
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, bgPaint)
         if (bitmap != null && dst != null) {
             iconPaint.colorFilter = null
             iconPaint.blendMode = BlendMode.DST_OUT
-            iconPaint.alpha = selectedAlpha
+            iconPaint.alpha = cutoutAlpha
             canvas.drawBitmap(bitmap, null, dst, iconPaint)
             iconPaint.blendMode = null
         }
         canvas.restoreToCount(overlayLayerId)
 
         // Shade layer composited normally.
-        bgPaint.color = checkedShadeColor
+        val shadeAlpha =
+            (Color.alpha(checkedShadeColor) * factor * renderAlpha).toInt().coerceIn(0, 255)
+        bgPaint.color = ColorUtils.setAlphaComponent(checkedShadeColor, shadeAlpha)
         bgPaint.blendMode = null
         val shadeLayerId = canvas.saveLayer(rect, null)
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, bgPaint)
         if (bitmap != null && dst != null) {
             iconPaint.colorFilter = null
             iconPaint.blendMode = BlendMode.DST_OUT
-            iconPaint.alpha = selectedAlpha
+            iconPaint.alpha = cutoutAlpha
             canvas.drawBitmap(bitmap, null, dst, iconPaint)
             iconPaint.blendMode = null
         }
         canvas.restoreToCount(shadeLayerId)
 
-        bgPaint.alpha = 255
         iconPaint.alpha = 255
     }
 
@@ -197,12 +206,14 @@ class OverlayPillButton @JvmOverloads constructor(
         if (inactiveFactor > 0F) {
             paint.colorFilter = overlayColorFilter
             paint.blendMode = BlendMode.OVERLAY
-            paint.alpha = (255 * ((inactiveFactor * 0.25F + 0.75F) * inactiveFactor)).toInt()
+            paint.alpha =
+                (255 * ((inactiveFactor * 0.25F + 0.75F) * inactiveFactor) * renderAlpha).toInt()
             canvas.drawBitmap(bitmap, null, dst, paint)
 
             paint.colorFilter = shadeColorFilter
             paint.blendMode = null
-            paint.alpha = (255 * ((inactiveFactor * 0.55F + 0.45F) * inactiveFactor)).toInt()
+            paint.alpha =
+                (255 * ((inactiveFactor * 0.55F + 0.45F) * inactiveFactor) * renderAlpha).toInt()
             canvas.drawBitmap(bitmap, null, dst, paint)
         }
     }
@@ -214,6 +225,14 @@ class OverlayPillButton @JvmOverloads constructor(
             updateBitmap(this)
         }
     }
+
+    override fun setAlpha(alpha: Float) {
+        renderAlpha = alpha.coerceIn(0F, 1F)
+        super.setAlpha(1F)
+        invalidate()
+    }
+
+    override fun getAlpha(): Float = renderAlpha
 
     private var valueAnimator: ValueAnimator? = null
 
