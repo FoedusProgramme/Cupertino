@@ -6,7 +6,6 @@ import android.graphics.Canvas
 import android.util.AttributeSet
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
-import org.lsposed.hiddenapibypass.HiddenApiBypass
 import uk.akane.cupertino.R
 import java.lang.reflect.Field
 
@@ -38,14 +37,41 @@ class OverlayTextView @JvmOverloads constructor(
             }
         }
 
-        textColorField = HiddenApiBypass.getInstanceFields(TextView::class.java)
-            .find { it.name == "mCurTextColor" } ?: throw NoSuchFieldException("Field 'mCurTextColor' not found")
+        textColorField = resolveTextColorField()
         textColorField.isAccessible = true
 
         isSingleLine = true
     }
 
+    private fun resolveTextColorField(): Field {
+        val fields = runCatching {
+            if (shouldUseHiddenApiBypass()) {
+                val clazz = Class.forName("org.lsposed.hiddenapibypass.HiddenApiBypass")
+                val method = clazz.getMethod("getInstanceFields", Class::class.java)
+                @Suppress("UNCHECKED_CAST")
+                method.invoke(null, TextView::class.java) as Array<Field>
+            } else {
+                TextView::class.java.declaredFields
+            }
+        }.getOrElse {
+            TextView::class.java.declaredFields
+        }
+        return fields.find { it.name == "mCurTextColor" }
+            ?: throw NoSuchFieldException("Field 'mCurTextColor' not found")
+    }
+
+    private fun shouldUseHiddenApiBypass(): Boolean {
+        if (isInEditMode) return false
+        val contextName = context.javaClass.name
+        return !contextName.contains("BridgeContext", ignoreCase = true)
+    }
+
     override fun onDraw(canvas: Canvas) {
+        if (isInEditMode) {
+            setTextColor(resources.getShadeLayerColor(textViewLayer))
+            super.onDraw(canvas)
+            return
+        }
         paint.blendMode = BlendMode.OVERLAY
         textColorField.set(this, resources.getOverlayLayerColor(textViewLayer))
         super.onDraw(canvas)
