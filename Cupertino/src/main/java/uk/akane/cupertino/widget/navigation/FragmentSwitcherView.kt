@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import androidx.core.animation.doOnEnd
@@ -35,6 +36,11 @@ class FragmentSwitcherView @JvmOverloads constructor(
     GestureDetector.OnGestureListener {
 
     private var gestureDetector = GestureDetector(context, this)
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private var isEdgeSwipeActive = false
+    private var edgeStartX = 0f
+    private var edgeStartY = 0f
+    private var edgeDownEvent: MotionEvent? = null
 
     // DEFAULT_CONTAINER
     private val containerDefault: FrameLayout
@@ -775,14 +781,66 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_UP ||
+            event.actionMasked == MotionEvent.ACTION_CANCEL
+        ) {
+            isEdgeSwipeActive = false
+        }
         return if (gestureDetector.onTouchEvent(event)) {
             true
         } else if (event.action == MotionEvent.ACTION_UP) {
             onUp(event)
             true
+        } else if (event.action == MotionEvent.ACTION_CANCEL) {
+            super.onTouchEvent(event)
         } else {
             super.onTouchEvent(event)
         }
+    }
+
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (subFragmentStack[currentBaseFragment].isEmpty()) {
+            return super.onInterceptTouchEvent(ev)
+        }
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                edgeStartX = ev.x
+                edgeStartY = ev.y
+                isEdgeSwipeActive = false
+                edgeDownEvent?.recycle()
+                edgeDownEvent = MotionEvent.obtain(ev)
+                return false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val dx = ev.x - edgeStartX
+                val dy = ev.y - edgeStartY
+                if (!isEdgeSwipeActive) {
+                    if (kotlin.math.abs(dy) > touchSlop && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
+                        edgeDownEvent?.recycle()
+                        edgeDownEvent = null
+                        return false
+                    }
+                    if (dx > touchSlop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                        isEdgeSwipeActive = true
+                        edgeDownEvent?.let {
+                            gestureDetector.onTouchEvent(it)
+                            it.recycle()
+                            edgeDownEvent = null
+                        }
+                        return true
+                    }
+                    return false
+                }
+                return true
+            }
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                isEdgeSwipeActive = false
+                edgeDownEvent?.recycle()
+                edgeDownEvent = null
+            }
+        }
+        return super.onInterceptTouchEvent(ev)
     }
 
     enum class ContainerType {
