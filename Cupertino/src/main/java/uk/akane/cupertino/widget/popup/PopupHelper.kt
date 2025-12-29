@@ -198,6 +198,7 @@ class PopupHelper(
 
         if (isRetract) {
             popupDismissAction?.invoke()
+            popupDismissAction = null
         }
 
         popupAnimator?.cancel()
