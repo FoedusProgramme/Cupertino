@@ -7,6 +7,7 @@
     <color name="light_elevated_container_child">#FFFFFF</color>
 
     <color name="color_on_surface">#000000</color>
+    <color name="onSurfaceColorSolid">#000000</color>
 
     <color name="batt_bg">#34C759</color>
 
@@ -21,6 +22,15 @@
 
     <color name="tertiaryOverlayShadeColor">#1AFFFFFF</color>
     <color name="tertiaryOverlayColor">#0DFFFFFF</color>
+
+    <!-- Popup Menu -->
+    <color name="popupMenuColorDodge">#383838</color>
+    <color name="popupMenuPlain">#D1B3B3B3</color>
+    <color name="popupMenuSeparator">#8C808080</color>
+    <color name="popupMenuLargeSeparator">#14000000</color>
+
+    <!-- Colors -->
+    <color name="red">#FF3B30</color>
 
     <!-- Blend View -->
     <color name="frontShadeColor">#59000000</color>
