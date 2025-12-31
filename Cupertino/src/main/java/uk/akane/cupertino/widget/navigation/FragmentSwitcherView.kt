@@ -1,5 +1,6 @@
 package uk.akane.cupertino.widget.navigation
 
+import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
@@ -20,10 +21,10 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
+import uk.akane.cupertino.widget.lerp
 import uk.akane.cupertino.widget.runOnContentLoaded
 import uk.akane.cupertino.widget.utils.AnimationUtils
 import uk.akane.cupertino.widget.utils.AnimationUtils.doOnEnd
-import kotlin.math.absoluteValue
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import android.view.animation.AnimationUtils as AndroidAnimationUtils
@@ -46,8 +47,16 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private val containerDefault: FrameLayout
     // APPEND_CONTAINER
     private val containerAppend: FrameLayout
+    private val scrimView: View
 
     private var activeContainer: ContainerType = ContainerType.DEFAULT_CONTAINER
+
+    private val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity
+    private val maxScrimAlpha = 0.4f
+    private val maxOverscrollFraction = 0.6f
+    private val overscrollResistance = 1f
+    private val backCommitThreshold = 0.5f
+    private var predictiveBackActive = false
 
     private var fragmentManager: FragmentManager? = null
     private val baseFragments: MutableList<Fragment> = mutableListOf()
@@ -67,6 +76,9 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
         containerDefault = findViewById(R.id.fragment_0)
         containerAppend = findViewById(R.id.fragment_1)
+        scrimView = findViewById(R.id.fragment_scrim)
+        scrimView.isClickable = false
+        scrimView.elevation = 5F.dpToPx(context)
 
         surfaceColor = resources.getColor(R.color.surfaceColor, null)
     }
@@ -319,6 +331,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     fun switchBaseFragment(
         newFragmentIndex: Int
     ) {
+        hideScrim()
         if (currentAnimator?.isRunning == true) {
             currentAnimator?.doOnEnd {
                 switchBaseFragment(newFragmentIndex)
@@ -542,10 +555,115 @@ class FragmentSwitcherView @JvmOverloads constructor(
             ContainerType.APPEND_CONTAINER -> containerAppend
         }
 
+    fun canPopBack(): Boolean = subFragmentStack[currentBaseFragment].isNotEmpty()
+
+    private fun showScrim(progress: Float) {
+        if (scrimView.visibility != View.VISIBLE) {
+            scrimView.visibility = View.VISIBLE
+        }
+        scrimView.alpha = lerp(maxScrimAlpha, 0f, progress)
+    }
+
+    private fun hideScrim() {
+        scrimView.alpha = 0f
+        scrimView.visibility = View.GONE
+    }
+
+    private fun updateScrimFromTranslation(translationX: Float) {
+        val progress = if (width > 0) (translationX / width).coerceIn(0f, 1f) else 0f
+        showScrim(progress)
+    }
+
+    private fun applyTranslation(translationX: Float) {
+        currentContainer?.translationX = translationX
+        targetContainer?.translationX = -(width.toFloat() - translationX) / 3F
+        updateScrimFromTranslation(translationX)
+    }
+
+    private fun prepareBackGesture(): Boolean {
+        if (animationLoadState == LoadState.ALREADY_LOADED) return true
+        if (subFragmentStack[currentBaseFragment].isEmpty()) return false
+        if (addValueAnimator?.isRunning == true || removeValueAnimator?.isRunning == true) return false
+
+        currentAnimator?.cancel()
+        currentAnimator = null
+
+        val list = subFragmentStack[currentBaseFragment]
+        targetFragment = if (list.size - 2 >= 0) list[list.size - 2] else baseFragments[currentBaseFragment]
+        targetFragmentIndex = if (list.size - 2 >= 0) list.size - 2 else -1
+        currentFragment = list[list.size - 1]
+        currentFragmentIndex = list.size - 1
+
+        targetContainer = if (activeContainer == ContainerType.DEFAULT_CONTAINER) containerAppend else containerDefault
+        currentContainer = getContainer(activeContainer)
+
+        currentContainer?.bringToFront()
+        targetContainer?.translationX = 0F
+
+        val fm = fragmentManager ?: return false
+        fm.beginTransaction()
+            .show(targetFragment!!)
+            .commit()
+
+        currentContainer?.translationX = 0F
+        currentContainer?.elevation = 10F.dpToPx(context)
+        currentContainer?.setBackgroundColor(surfaceColor)
+
+        animationLoadState = LoadState.ALREADY_LOADED
+        showScrim(0f)
+        return true
+    }
+
+    private fun animateBackTo(
+        targetTranslation: Float,
+        finish: Boolean,
+        duration: Long = AnimationUtils.FAST_DURATION,
+        interpolator: TimeInterpolator = AnimationUtils.fastOutSlowInInterpolator
+    ) {
+        currentAnimator?.cancel()
+        val startTranslation = currentContainer?.translationX ?: return
+        currentAnimator = AnimationUtils.createValAnimator<Float>(
+            startTranslation,
+            targetTranslation,
+            duration = duration,
+            interpolator = interpolator,
+            doOnEnd = {
+                isAnimationProperlyFinished = finish
+                onAnimationFinished()
+                currentAnimator = null
+            }
+        ) { value ->
+            applyTranslation(value)
+        }
+    }
+
+    fun startPredictiveBack(): Boolean {
+        predictiveBackActive = prepareBackGesture()
+        return predictiveBackActive
+    }
+
+    fun updatePredictiveBack(progress: Float) {
+        if (!predictiveBackActive && !prepareBackGesture()) return
+        val clamped = progress.coerceIn(0f, 1f)
+        applyTranslation(width.toFloat() * clamped)
+    }
+
+    fun cancelPredictiveBack() {
+        if (animationLoadState != LoadState.ALREADY_LOADED) {
+            predictiveBackActive = false
+            return
+        }
+        animateBackTo(0f, finish = false)
+    }
+
+    fun commitPredictiveBack(): Boolean {
+        if (!predictiveBackActive && !prepareBackGesture()) return false
+        animateBackTo(width.toFloat(), finish = true)
+        return true
+    }
+
     private var penultimateMotionX = 0F
-    private var penultimateMotionTime = 0L
     private var lastMotionX = 0F
-    private var lastMotionTime = 0L
 
     private var animationLoadState: LoadState = LoadState.DO_NOT_LOAD
     private var targetContainer: FrameLayout? = null
@@ -557,7 +675,14 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private var isAnimationProperlyFinished: Boolean = false
 
     override fun onDown(e: MotionEvent): Boolean {
-        if (subFragmentStack[currentBaseFragment].isNotEmpty() && animationLoadState == LoadState.DO_NOT_LOAD) {
+        penultimateMotionX = e.x
+        lastMotionX = e.x
+        if (subFragmentStack[currentBaseFragment].isNotEmpty() &&
+            animationLoadState == LoadState.DO_NOT_LOAD &&
+            addValueAnimator?.isRunning != true &&
+            removeValueAnimator?.isRunning != true &&
+            currentAnimator?.isRunning != true
+        ) {
             animationLoadState = LoadState.SHOULD_LOAD
         }
         return true
@@ -572,33 +697,19 @@ class FragmentSwitcherView @JvmOverloads constructor(
         velocityY: Float
     ): Boolean {
         if (animationLoadState == LoadState.ALREADY_LOADED) {
-            val distance = penultimateMotionX - lastMotionX
-            val lastVelocity = -(lastMotionX - penultimateMotionX) / (lastMotionTime - penultimateMotionTime) * SPEED_FACTOR
+            val minVelocity = minFlingVelocity.toFloat()
+            val absVelocity = kotlin.math.abs(velocityX).coerceAtLeast(minVelocity)
             val supposedDuration =
-                ((width) / lastVelocity)
+                ((width / absVelocity) * 1000)
                     .toLong()
-                    .absoluteValue
                     .coerceIn(
                         MINIMUM_ANIMATION_TIME,
                         MAXIMUM_ANIMATION_TIME
                     )
 
-            val isSlidingForward = distance > 0
-
-            currentAnimator?.cancel()
-            currentAnimator = AnimationUtils.createValAnimator<Float>(
-                currentContainer!!.translationX,
-                if (isSlidingForward) 0F else width.toFloat(),
-                duration = supposedDuration,
-                doOnEnd = {
-                    isAnimationProperlyFinished = !isSlidingForward
-                    onAnimationFinished()
-                    currentAnimator = null
-                }
-            ) {
-                currentContainer!!.translationX = it
-                targetContainer!!.translationX = -(width.toFloat() - it) / 3F
-            }
+            val shouldFinish = velocityX > minVelocity
+            val target = if (shouldFinish) width.toFloat() else 0F
+            animateBackTo(target, finish = shouldFinish, duration = supposedDuration)
         }
         return true
     }
@@ -612,44 +723,21 @@ class FragmentSwitcherView @JvmOverloads constructor(
         distanceY: Float
     ): Boolean {
         penultimateMotionX = lastMotionX
-        penultimateMotionTime = lastMotionTime
         lastMotionX = e2.x
-        lastMotionTime = e2.eventTime
 
         if (animationLoadState == LoadState.SHOULD_LOAD) {
-            if (subFragmentStack[currentBaseFragment].isEmpty()) return true
-            val list = subFragmentStack[currentBaseFragment]
-            targetFragment = if (list.size - 2 >= 0) list[list.size - 2] else baseFragments[currentBaseFragment]
-            targetFragmentIndex = if (list.size - 2 >= 0) list.size - 2 else -1
-            currentFragment = list[list.size - 1]
-            currentFragmentIndex = list.size - 1
-
-            targetContainer = if (activeContainer == ContainerType.DEFAULT_CONTAINER) containerAppend else containerDefault
-            currentContainer = getContainer(activeContainer)
-
-            currentContainer?.bringToFront()
-            targetContainer?.translationX = 0F
-
-            val fm = fragmentManager ?: return true
-            fm.beginTransaction()
-                .show(targetFragment!!)
-                .commit()
-
-            // Make end container ready to show up.
-            currentContainer?.translationX = 0F
-            currentContainer?.elevation = 10F.dpToPx(context)
-            currentContainer?.setBackgroundColor(surfaceColor)
-
-            animationLoadState = LoadState.ALREADY_LOADED
-            return true
+            if (!prepareBackGesture()) return true
         }
 
         if (animationLoadState == LoadState.ALREADY_LOADED) {
             val distance = penultimateMotionX - lastMotionX
-            currentContainer?.translationX =
-                (currentContainer!!.translationX - distance).coerceIn(0F, width.toFloat())
-            targetContainer?.translationX =
-                -(width.toFloat() - currentContainer!!.translationX) / 3F
+            val proposed = (currentContainer!!.translationX - distance)
+            val maxOverscroll = width.toFloat() * maxOverscrollFraction
+            val translation = when {
+                proposed < 0F -> (proposed * overscrollResistance).coerceAtLeast(-maxOverscroll)
+                else -> proposed.coerceAtMost(width.toFloat())
+            }
+            applyTranslation(translation)
             return true
         }
         return true
@@ -696,38 +784,17 @@ class FragmentSwitcherView @JvmOverloads constructor(
             currentFragment = null
             isAnimationProperlyFinished = false
             animationLoadState = LoadState.DO_NOT_LOAD
+            predictiveBackActive = false
+            hideScrim()
         }
     }
 
     private fun onUp(e: MotionEvent) {
         if (animationLoadState == LoadState.ALREADY_LOADED) {
-            val distance = penultimateMotionX - lastMotionX
-            val lastVelocity = -(lastMotionX - penultimateMotionX) / (lastMotionTime - penultimateMotionTime) * SPEED_FACTOR
-            val supposedDuration =
-                ((width) / lastVelocity)
-                    .toLong()
-                    .absoluteValue
-                    .coerceIn(
-                        MINIMUM_ANIMATION_TIME,
-                        MAXIMUM_ANIMATION_TIME
-                    )
-
-            val isSlidingForward = distance > 0
-
-            currentAnimator?.cancel()
-            currentAnimator = AnimationUtils.createValAnimator<Float>(
-                currentContainer!!.translationX,
-                if (isSlidingForward) 0F else width.toFloat(),
-                duration = supposedDuration,
-                doOnEnd = {
-                    isAnimationProperlyFinished = !isSlidingForward
-                    onAnimationFinished()
-                    currentAnimator = null
-                }
-            ) {
-                currentContainer!!.translationX = it
-                targetContainer!!.translationX = -(width.toFloat() - it) / 3F
-            }
+            val progress = if (width > 0) (currentContainer!!.translationX / width).coerceIn(0f, 1f) else 0f
+            val shouldFinish = progress > backCommitThreshold
+            val target = if (shouldFinish) width.toFloat() else 0F
+            animateBackTo(target, finish = shouldFinish)
         }
     }
 
@@ -736,30 +803,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     fun popBackTopFragmentIfExists(): Boolean {
         if (removeValueAnimator?.isRunning == true) return false
 
-        val stack = subFragmentStack[currentBaseFragment]
-        if (stack.isEmpty()) return false
-
-        val fm = fragmentManager ?: return false
-        val list = subFragmentStack[currentBaseFragment]
-
-        targetFragment = if (list.size - 2 >= 0) list[list.size - 2] else baseFragments[currentBaseFragment]
-        targetFragmentIndex = if (list.size - 2 >= 0) list.size - 2 else -1
-        currentFragment = list[list.size - 1]
-        currentFragmentIndex = list.size - 1
-
-        targetContainer = if (activeContainer == ContainerType.DEFAULT_CONTAINER) containerAppend else containerDefault
-        currentContainer = getContainer(activeContainer)
-
-        fm.beginTransaction()
-            .show(targetFragment!!)
-            .commit()
-
-        currentContainer?.translationX = 0F
-        currentContainer?.elevation = 10F.dpToPx(context)
-        currentContainer?.setBackgroundColor(surfaceColor)
-        targetContainer?.translationX = 0F
-
-        animationLoadState = LoadState.ALREADY_LOADED
+        if (!prepareBackGesture()) return false
 
         removeValueAnimator?.cancel()
         removeValueAnimator = AnimationUtils.createValAnimator<Float>(
@@ -771,8 +815,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 removeValueAnimator = null
             }
         ) {
-            currentContainer!!.translationX = it
-            targetContainer!!.translationX = -(width.toFloat() - it) / 3F
+            applyTranslation(it)
         }
 
         return true
@@ -781,6 +824,14 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (predictiveBackActive) {
+            if (event.actionMasked == MotionEvent.ACTION_UP ||
+                event.actionMasked == MotionEvent.ACTION_CANCEL
+            ) {
+                isEdgeSwipeActive = false
+            }
+            return true
+        }
         if (event.actionMasked == MotionEvent.ACTION_UP ||
             event.actionMasked == MotionEvent.ACTION_CANCEL
         ) {
@@ -792,13 +843,21 @@ class FragmentSwitcherView @JvmOverloads constructor(
             onUp(event)
             true
         } else if (event.action == MotionEvent.ACTION_CANCEL) {
-            super.onTouchEvent(event)
+            if (animationLoadState == LoadState.ALREADY_LOADED) {
+                animateBackTo(0f, finish = false)
+                true
+            } else {
+                super.onTouchEvent(event)
+            }
         } else {
             super.onTouchEvent(event)
         }
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
+        if (predictiveBackActive) {
+            return false
+        }
         if (subFragmentStack[currentBaseFragment].isEmpty()) {
             return super.onInterceptTouchEvent(ev)
         }
@@ -814,13 +873,14 @@ class FragmentSwitcherView @JvmOverloads constructor(
             MotionEvent.ACTION_MOVE -> {
                 val dx = ev.x - edgeStartX
                 val dy = ev.y - edgeStartY
+                if (isEdgeSwipeActive) return true
                 if (!isEdgeSwipeActive) {
                     if (kotlin.math.abs(dy) > touchSlop && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
                         edgeDownEvent?.recycle()
                         edgeDownEvent = null
                         return false
                     }
-                    if (dx > touchSlop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                    if (kotlin.math.abs(dx) > touchSlop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
                         isEdgeSwipeActive = true
                         edgeDownEvent?.let {
                             gestureDetector.onTouchEvent(it)
@@ -860,7 +920,6 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
         const val MINIMUM_ANIMATION_TIME = 220L
         const val MAXIMUM_ANIMATION_TIME = 320L
-        const val SPEED_FACTOR = 2F
     }
 
 }
