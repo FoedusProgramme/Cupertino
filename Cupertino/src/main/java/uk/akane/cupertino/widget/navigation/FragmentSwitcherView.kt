@@ -13,7 +13,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.LinearInterpolator
+import android.view.WindowInsets
 import android.widget.FrameLayout
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.animation.doOnEnd
 import androidx.core.view.doOnLayout
 import androidx.fragment.app.Fragment
@@ -57,6 +59,10 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private val overscrollResistance = 1f
     private val backCommitThreshold = 0.5f
     private var predictiveBackActive = false
+    private var ignoreEdgeSwipe = false
+    private var systemGestureInsetLeft = 0
+    private var systemGestureInsetRight = 0
+    private val fallbackGestureInset = ViewConfiguration.get(context).scaledEdgeSlop
 
     private var fragmentManager: FragmentManager? = null
     private val baseFragments: MutableList<Fragment> = mutableListOf()
@@ -576,7 +582,11 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     private fun applyTranslation(translationX: Float) {
         currentContainer?.translationX = translationX
-        targetContainer?.translationX = -(width.toFloat() - translationX) / 3F
+        targetContainer?.translationX = if (translationX >= 0F) {
+            -(width.toFloat() - translationX) / 3F
+        } else {
+            -width.toFloat()
+        }
         updateScrimFromTranslation(translationX)
     }
 
@@ -603,7 +613,14 @@ class FragmentSwitcherView @JvmOverloads constructor(
         val fm = fragmentManager ?: return false
         fm.beginTransaction()
             .show(targetFragment!!)
-            .commit()
+            .apply {
+                if (fm.isStateSaved) {
+                    commitAllowingStateLoss()
+                    fm.executePendingTransactions()
+                } else {
+                    commitNow()
+                }
+            }
 
         currentContainer?.translationX = 0F
         currentContainer?.elevation = 10F.dpToPx(context)
@@ -866,11 +883,20 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 edgeStartX = ev.x
                 edgeStartY = ev.y
                 isEdgeSwipeActive = false
+                ignoreEdgeSwipe =
+                    edgeStartX <= systemGestureInsetLeft ||
+                    edgeStartX >= (width - systemGestureInsetRight)
+                if (ignoreEdgeSwipe) {
+                    edgeDownEvent?.recycle()
+                    edgeDownEvent = null
+                    return false
+                }
                 edgeDownEvent?.recycle()
                 edgeDownEvent = MotionEvent.obtain(ev)
                 return false
             }
             MotionEvent.ACTION_MOVE -> {
+                if (ignoreEdgeSwipe) return false
                 val dx = ev.x - edgeStartX
                 val dy = ev.y - edgeStartY
                 if (isEdgeSwipeActive) return true
@@ -896,11 +922,20 @@ class FragmentSwitcherView @JvmOverloads constructor(
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL -> {
                 isEdgeSwipeActive = false
+                ignoreEdgeSwipe = false
                 edgeDownEvent?.recycle()
                 edgeDownEvent = null
             }
         }
         return super.onInterceptTouchEvent(ev)
+    }
+
+    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+        val compat = WindowInsetsCompat.toWindowInsetsCompat(insets, this)
+        val systemGestures = compat.getInsets(WindowInsetsCompat.Type.systemGestures())
+        systemGestureInsetLeft = systemGestures.left.takeIf { it > 0 } ?: fallbackGestureInset
+        systemGestureInsetRight = systemGestures.right.takeIf { it > 0 } ?: fallbackGestureInset
+        return super.onApplyWindowInsets(insets)
     }
 
     enum class ContainerType {
