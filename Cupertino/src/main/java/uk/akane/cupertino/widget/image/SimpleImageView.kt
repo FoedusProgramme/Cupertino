@@ -163,6 +163,20 @@ class SimpleImageView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setStroke(widthPx: Float, color: Int) {
+        strokePaint.strokeWidth = widthPx
+        strokePaint.color = color
+        invalidate()
+    }
+
+    fun getStrokeWidth(): Float {
+        return strokePaint.strokeWidth
+    }
+
+    fun getCornerRadius(): Int {
+        return cornerRadius
+    }
+
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
