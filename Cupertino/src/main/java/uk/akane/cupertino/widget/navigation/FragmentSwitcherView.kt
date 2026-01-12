@@ -917,6 +917,9 @@ class FragmentSwitcherView @JvmOverloads constructor(
                         return false
                     }
                     if (kotlin.math.abs(dx) > touchSlop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                        if (canScroll(this, false, dx.toInt(), ev.x.toInt(), ev.y.toInt())) {
+                            return false
+                        }
                         isEdgeSwipeActive = true
                         edgeDownEvent?.let {
                             gestureDetector.onTouchEvent(it)
@@ -938,6 +941,30 @@ class FragmentSwitcherView @JvmOverloads constructor(
             }
         }
         return super.onInterceptTouchEvent(ev)
+    }
+
+    private fun canScroll(v: View, checkV: Boolean, dx: Int, x: Int, y: Int): Boolean {
+        if (v is android.view.ViewGroup) {
+            val scrollX = v.scrollX
+            val scrollY = v.scrollY
+            val count = v.childCount
+            for (i in count - 1 downTo 0) {
+                val child = v.getChildAt(i)
+                if (x + scrollX >= child.left && x + scrollX < child.right &&
+                    y + scrollY >= child.top && y + scrollY < child.bottom
+                ) {
+                    if (canScroll(
+                            child, true, dx,
+                            x + scrollX - child.left,
+                            y + scrollY - child.top
+                        )
+                    ) {
+                        return true
+                    }
+                }
+            }
+        }
+        return checkV && v.canScrollHorizontally(-dx)
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
