@@ -74,6 +74,8 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     private var surfaceColor: Int = 0
 
+    var onStackChangeListener: (() -> Unit)? = null
+
     init {
         @Suppress("UsePropertyAccessSyntax")
         gestureDetector.setIsLongpressEnabled(false)
@@ -553,7 +555,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     val containerStatus: ContainerType get() = activeContainer
 
-    val currentStackSize: Int get() = subFragmentStack[currentBaseFragment].size
+    val currentStackSize: Int get() = subFragmentStack.getOrNull(currentBaseFragment)?.size ?: 0
 
     private fun getContainer(containerType: ContainerType): FrameLayout =
         when (containerType) {
@@ -780,11 +782,19 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 else
                     return@apply
             }
-                .commit()
+                .apply {
+                    if (fm.isStateSaved) {
+                        commitAllowingStateLoss()
+                        fm.executePendingTransactions()
+                    } else {
+                        commitNow()
+                    }
+                }
 
             // Also remove the fragment from our stack, log everything we needed
             if (isAnimationProperlyFinished) {
                 subFragmentStack[currentBaseFragment].removeAt(subFragmentStack[currentBaseFragment].lastIndex)
+                onStackChangeListener?.invoke()
                 activeContainer =
                     if (activeContainer == ContainerType.DEFAULT_CONTAINER) ContainerType.APPEND_CONTAINER else ContainerType.DEFAULT_CONTAINER
                 // Reset current container.
