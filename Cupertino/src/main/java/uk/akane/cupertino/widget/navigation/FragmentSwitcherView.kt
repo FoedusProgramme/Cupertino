@@ -793,7 +793,9 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
             // Also remove the fragment from our stack, log everything we needed
             if (isAnimationProperlyFinished) {
-                subFragmentStack[currentBaseFragment].removeAt(subFragmentStack[currentBaseFragment].lastIndex)
+                if (subFragmentStack[currentBaseFragment].isNotEmpty()) {
+                    subFragmentStack[currentBaseFragment].removeAt(subFragmentStack[currentBaseFragment].lastIndex)
+                }
                 onStackChangeListener?.invoke()
                 activeContainer =
                     if (activeContainer == ContainerType.DEFAULT_CONTAINER) ContainerType.APPEND_CONTAINER else ContainerType.DEFAULT_CONTAINER
