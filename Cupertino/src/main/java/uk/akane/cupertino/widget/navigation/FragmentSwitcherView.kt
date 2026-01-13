@@ -360,7 +360,8 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
         // Get start / end fragment, its type and the current
         // container status so we can decide states easier later.
-        val startFragmentStack = subFragmentStack[currentBaseFragment]
+        val startFragmentStack =
+            subFragmentStack.getOrNull(currentBaseFragment) ?: return
         val startFragment =
             if (startFragmentStack.isEmpty())
                 baseFragments[currentBaseFragment]

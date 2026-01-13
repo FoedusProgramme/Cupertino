@@ -175,13 +175,11 @@ class BlendView @JvmOverloads constructor(
                         updateImageViews(enhancedBitmap)
                     }
                 }
-                previousBitmap?.recycle()
                 previousBitmap = originalBitmap
             } else if (originalBitmap == null) {
                 withContext(Dispatchers.Main) {
                     clearImageViews()
                 }
-                previousBitmap?.recycle()
                 previousBitmap = null
             }
         }
@@ -195,13 +193,11 @@ class BlendView @JvmOverloads constructor(
                         updateImageViews(enhancedBitmap)
                     }
                 }
-                previousBitmap?.recycle()
                 previousBitmap = bitmap
             } else if (bitmap == null) {
                 withContext(Dispatchers.Main) {
                     clearImageViews()
                 }
-                previousBitmap?.recycle()
                 previousBitmap = null
             }
         }
@@ -315,11 +311,17 @@ class BlendView @JvmOverloads constructor(
     }
 
     private fun enhanceBitmap(bitmap: Bitmap): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
+        val safeBitmap = if (bitmap.config == Bitmap.Config.HARDWARE) {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: bitmap
+        } else {
+            bitmap
+        }
+
+        val width = safeBitmap.width
+        val height = safeBitmap.height
 
         val enhancedBitmap = createBitmap(width, height)
-        enhancedBitmap.density = bitmap.density
+        enhancedBitmap.density = safeBitmap.density
 
         val enhancePaint = Paint()
         val colorMatrix = ColorMatrix().apply { setSaturation(SATURATION_FACTOR) }
@@ -338,7 +340,7 @@ class BlendView @JvmOverloads constructor(
         enhancePaint.colorFilter = ColorMatrixColorFilter(colorMatrix)
 
         val canvas = Canvas(enhancedBitmap)
-        canvas.drawBitmap(bitmap, 0f, 0f, enhancePaint)
+        canvas.drawBitmap(safeBitmap, 0f, 0f, enhancePaint)
 
         return enhancedBitmap
     }

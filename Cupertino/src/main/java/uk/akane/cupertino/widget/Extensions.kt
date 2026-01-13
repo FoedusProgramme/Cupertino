@@ -130,7 +130,11 @@ inline fun lerp(start: Float, stop: Float, amount: Float): Float {
 }
 
 fun Bitmap?.areBitmapsVaguelySame(b1: Bitmap?): Boolean {
-    return b1 != null && this != null && b1.width == this.width && b1.height == this.height && b1.getColor(0, 0) == this.getColor(0, 0)
+    if (this == null || b1 == null) return this == b1
+    if (this === b1) return true
+    if (this.width != b1.width || this.height != b1.height) return false
+    if (this.config == Bitmap.Config.HARDWARE || b1.config == Bitmap.Config.HARDWARE) return false
+    return this.sameAs(b1)
 }
 
 
