@@ -952,6 +952,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
             val count = v.childCount
             for (i in count - 1 downTo 0) {
                 val child = v.getChildAt(i)
+                if (child.visibility != View.VISIBLE) continue
                 if (x + scrollX >= child.left && x + scrollX < child.right &&
                     y + scrollY >= child.top && y + scrollY < child.bottom
                 ) {
