@@ -260,7 +260,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
         // EndC:   [DEFAULT_CONTAINER]
         val fm = fragmentManager ?: return
 
-        val targetStackList = subFragmentStack[currentBaseFragment]
+        val targetStackList = subFragmentStack.getOrNull(currentBaseFragment) ?: return
         val currentFragment = if (targetStackList.isEmpty())
             baseFragments[currentBaseFragment]
         else
@@ -564,7 +564,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
             ContainerType.APPEND_CONTAINER -> containerAppend
         }
 
-    fun canPopBack(): Boolean = subFragmentStack[currentBaseFragment].isNotEmpty()
+    fun canPopBack(): Boolean = currentBaseFragment in subFragmentStack.indices && subFragmentStack[currentBaseFragment].isNotEmpty()
 
     private fun showScrim(progress: Float) {
         if (scrimView.visibility != View.VISIBLE) {
@@ -595,7 +595,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     private fun prepareBackGesture(): Boolean {
         if (animationLoadState == LoadState.ALREADY_LOADED) return true
-        if (subFragmentStack[currentBaseFragment].isEmpty()) return false
+        if (currentBaseFragment !in subFragmentStack.indices || subFragmentStack[currentBaseFragment].isEmpty()) return false
         if (addValueAnimator?.isRunning == true || removeValueAnimator?.isRunning == true) return false
 
         currentAnimator?.cancel()
@@ -888,7 +888,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
         if (predictiveBackActive) {
             return false
         }
-        if (subFragmentStack[currentBaseFragment].isEmpty()) {
+        if (currentBaseFragment !in subFragmentStack.indices || subFragmentStack[currentBaseFragment].isEmpty()) {
             return super.onInterceptTouchEvent(ev)
         }
         when (ev.actionMasked) {
