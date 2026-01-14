@@ -68,5 +68,12 @@
         <attr name="cornerRadius" />
     </declare-styleable>
 
+    <declare-styleable name="OverlayTextPillButton">
+        <attr name="android:text" />
+        <attr name="icon" />
+        <attr name="iconSize" />
+        <attr name="cornerRadius" />
+    </declare-styleable>
+
 
 </resources>
