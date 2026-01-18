@@ -697,7 +697,8 @@ class FragmentSwitcherView @JvmOverloads constructor(
     override fun onDown(e: MotionEvent): Boolean {
         penultimateMotionX = e.x
         lastMotionX = e.x
-        if (subFragmentStack[currentBaseFragment].isNotEmpty() &&
+        val currentStack = subFragmentStack.getOrNull(currentBaseFragment)
+        if (currentStack != null && currentStack.isNotEmpty() &&
             animationLoadState == LoadState.DO_NOT_LOAD &&
             addValueAnimator?.isRunning != true &&
             removeValueAnimator?.isRunning != true &&
