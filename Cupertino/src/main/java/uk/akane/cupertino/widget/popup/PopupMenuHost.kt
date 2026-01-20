@@ -12,7 +12,8 @@ interface PopupMenuHost {
         locationY: Int,
         anchorFromTop: Boolean = false,
         backgroundView: View? = null,
-        onDismiss: (() -> Unit)? = null
+        onDismiss: (() -> Unit)? = null,
+        onEntryClick: ((PopupHelper.PopupEntry) -> Unit)? = null
     )
 }
 
@@ -22,7 +23,8 @@ fun PopupMenuHost.showPopupMenuAtScreen(
     screenY: Int,
     anchorFromTop: Boolean = false,
     backgroundView: View? = null,
-    onDismiss: (() -> Unit)? = null
+    onDismiss: (() -> Unit)? = null,
+    onEntryClick: ((PopupHelper.PopupEntry) -> Unit)? = null
 ) {
     val hostLocation = IntArray(2)
     popupHostView.getLocationOnScreen(hostLocation)
@@ -30,7 +32,7 @@ fun PopupMenuHost.showPopupMenuAtScreen(
     val localX = screenX - hostLocation[0]
     val localY = screenY - hostLocation[1]
 
-    showPopupMenu(entries, localX, localY, anchorFromTop, backgroundView, onDismiss)
+    showPopupMenu(entries, localX, localY, anchorFromTop, backgroundView, onDismiss, onEntryClick)
 }
 
 fun PopupMenuHost.showPopupMenuFromAnchor(
@@ -42,7 +44,8 @@ fun PopupMenuHost.showPopupMenuFromAnchor(
     anchorOffsetY: Int = 0,
     belowGapPx: Int = 0,
     backgroundView: View? = null,
-    onDismiss: (() -> Unit)? = null
+    onDismiss: (() -> Unit)? = null,
+    onEntryClick: ((PopupHelper.PopupEntry) -> Unit)? = null
 ) {
     val anchorLocation = IntArray(2)
     val hostLocation = IntArray(2)
@@ -54,7 +57,7 @@ fun PopupMenuHost.showPopupMenuFromAnchor(
     val locationX = localLeft + anchorOffsetX + if (alignToRight) anchorView.width else 0
     val locationY = localTop + anchorOffsetY + if (showBelow) anchorView.height + belowGapPx else 0
 
-    showPopupMenu(entries, locationX, locationY, showBelow, backgroundView, onDismiss)
+    showPopupMenu(entries, locationX, locationY, showBelow, backgroundView, onDismiss, onEntryClick)
 }
 
 fun PopupMenuHost.showPopupMenuFromAnchorRect(
@@ -67,7 +70,8 @@ fun PopupMenuHost.showPopupMenuFromAnchorRect(
     anchorOffsetY: Int = 0,
     belowGapPx: Int = 0,
     backgroundView: View? = null,
-    onDismiss: (() -> Unit)? = null
+    onDismiss: (() -> Unit)? = null,
+    onEntryClick: ((PopupHelper.PopupEntry) -> Unit)? = null
 ) {
     val anchorLocation = IntArray(2)
     val hostLocation = IntArray(2)
@@ -82,5 +86,5 @@ fun PopupMenuHost.showPopupMenuFromAnchorRect(
     val locationY = (baseY + if (showBelow) anchorRect.height() + belowGapPx else 0f).toInt() +
         anchorOffsetY
 
-    showPopupMenu(entries, locationX, locationY, showBelow, backgroundView, onDismiss)
+    showPopupMenu(entries, locationX, locationY, showBelow, backgroundView, onDismiss, onEntryClick)
 }

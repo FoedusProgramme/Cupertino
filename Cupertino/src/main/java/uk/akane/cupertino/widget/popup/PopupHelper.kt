@@ -151,6 +151,27 @@ class PopupHelper(
         return x in popupLeft..popupRight && y in popupTop..popupBottom
     }
 
+    fun findEntryAt(x: Float, y: Float): PopupEntry? {
+        if (popupTransformFraction != 1f) return null
+        if (!isInsidePopupMenu(x, y)) return null
+        val entries = currentPopupEntries?.entries ?: return null
+        val startTop = if (popupAnchorFromTop) {
+            popupInitialLocationY.toFloat()
+        } else {
+            popupInitialLocationY - popupHeight
+        }
+        var heightAccumulated = 0f
+        entries.forEach { entry ->
+            val entryTop = startTop + heightAccumulated
+            val entryBottom = entryTop + entry.heightInPx
+            if (y in entryTop..entryBottom) {
+                return entry
+            }
+            heightAccumulated += entry.heightInPx
+        }
+        return null
+    }
+
     fun drawPopup(canvas: Canvas) {
         if (popupTransformFraction != 0f) {
             calculatePopupBounds()
@@ -456,22 +477,34 @@ class PopupHelper(
     class PopupMenuBuilder {
         private val menuEntryList: MutableList<PopupEntry> = mutableListOf()
 
-        fun addMenuEntry(resources: Resources, iconResId: Int, iconDescriptionResId: Int): PopupMenuBuilder {
+        fun addMenuEntry(
+            resources: Resources,
+            iconResId: Int,
+            iconDescriptionResId: Int,
+            payload: Any? = null
+        ): PopupMenuBuilder {
             menuEntryList.add(
                 MenuEntry(
                     ResourcesCompat.getDrawable(resources, iconResId, null)!!,
-                    resources.getString(iconDescriptionResId)
+                    resources.getString(iconDescriptionResId),
+                    payload = payload
                 )
             )
             return this
         }
 
-        fun addDestructiveMenuEntry(resources: Resources, iconResId: Int, iconDescriptionResId: Int): PopupMenuBuilder {
+        fun addDestructiveMenuEntry(
+            resources: Resources,
+            iconResId: Int,
+            iconDescriptionResId: Int,
+            payload: Any? = null
+        ): PopupMenuBuilder {
             menuEntryList.add(
                 MenuEntry(
                     ResourcesCompat.getDrawable(resources, iconResId, null)!!,
                     resources.getString(iconDescriptionResId),
-                    true
+                    true,
+                    payload
                 )
             )
             return this
@@ -488,7 +521,8 @@ class PopupHelper(
     data class MenuEntry(
         val icon: Drawable,
         val string: String,
-        val isDestructive: Boolean = false
+        val isDestructive: Boolean = false,
+        val payload: Any? = null
     ) : PopupEntry(48)
 
     class Spacer : PopupEntry(10)
