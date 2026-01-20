@@ -15,6 +15,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.text.TextPaint
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withSave
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.utils.AnimationUtils
@@ -109,6 +110,7 @@ class PopupHelper(
     // Progress
     private var popupTransformFraction = 0F
     private var popupRenderNodeDirty = true
+    private var pressedEntryIndex: Int? = null
     val transformFraction: Float
         get() = popupTransformFraction
     private var popupAnchorFromTop = false
@@ -125,6 +127,9 @@ class PopupHelper(
     private val separatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = separatorColor }
     private val largeSeparatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = largeSeparatorColor }
     private val popupForegroundShadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = popupColorPlain }
+    private val popupPressedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ColorUtils.setAlphaComponent(popupColorPlain, 80)
+    }
 
     // Content paint
     val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -152,6 +157,24 @@ class PopupHelper(
     }
 
     fun findEntryAt(x: Float, y: Float): PopupEntry? {
+        val index = findEntryIndexAt(x, y) ?: return null
+        return currentPopupEntries?.entries?.get(index)
+    }
+
+    fun updatePressedEntry(x: Float, y: Float): Boolean {
+        val newIndex = findEntryIndexAt(x, y)
+        if (pressedEntryIndex == newIndex) return false
+        pressedEntryIndex = newIndex
+        return true
+    }
+
+    fun clearPressedEntry(): Boolean {
+        if (pressedEntryIndex == null) return false
+        pressedEntryIndex = null
+        return true
+    }
+
+    private fun findEntryIndexAt(x: Float, y: Float): Int? {
         if (popupTransformFraction != 1f) return null
         if (!isInsidePopupMenu(x, y)) return null
         val entries = currentPopupEntries?.entries ?: return null
@@ -161,11 +184,11 @@ class PopupHelper(
             popupInitialLocationY - popupHeight
         }
         var heightAccumulated = 0f
-        entries.forEach { entry ->
+        entries.forEachIndexed { index, entry ->
             val entryTop = startTop + heightAccumulated
             val entryBottom = entryTop + entry.heightInPx
             if (y in entryTop..entryBottom) {
-                return entry
+                return if (entry is MenuEntry) index else null
             }
             heightAccumulated += entry.heightInPx
         }
@@ -221,6 +244,7 @@ class PopupHelper(
             popupDismissAction?.invoke()
             popupDismissAction = null
         }
+        pressedEntryIndex = null
 
         popupAnimator?.cancel()
         popupAnimator = null
@@ -397,6 +421,15 @@ class PopupHelper(
                     }
 
                     is MenuEntry -> {
+                        if (pressedEntryIndex == index) {
+                            canvas.drawRect(
+                                entryLeft,
+                                entryTop,
+                                entryRight,
+                                entryBottom,
+                                popupPressedPaint
+                            )
+                        }
                         textPaint.color =
                             if (entry.isDestructive) destructiveColor else contentColor
 
