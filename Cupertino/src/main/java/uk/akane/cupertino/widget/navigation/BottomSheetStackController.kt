@@ -139,7 +139,8 @@ class BottomSheetStackController(
     private fun removeContainerInternal(affectBackground: Boolean) {
         val container = rootView.findViewById<FragmentContainerView>(containerId)
             ?: return
-        val previousContainerId = if (!affectBackground && containerStack.size > 1) {
+        val isStacked = !affectBackground && containerStack.size > 1
+        val previousContainerId = if (isStacked) {
             containerStack.elementAt(containerStack.size - 2)
         } else {
             null
@@ -147,10 +148,12 @@ class BottomSheetStackController(
 
         val containerCardView: MaterialCardView = container.findViewById(config.rootCardViewId)
         val screenHeight = Resources.getSystem().displayMetrics.heightPixels.toFloat()
+        val startAlpha = containerCardView.alpha
+        val endAlpha = if (isStacked) 0f else startAlpha
         if (affectBackground) {
             callbacks.onBeforeHide()
         }
-        if (!affectBackground && containerStack.size == 2) {
+        if (isStacked && containerStack.size == 2) {
             callbacks.onShowUnderlayAnimated()
         }
         previousContainerId?.let { animateContainerScale(it, 1f) }
@@ -174,6 +177,10 @@ class BottomSheetStackController(
             }
         ) { animatedValue ->
             containerCardView.translationY = animatedValue
+            if (isStacked) {
+                val fraction = (animatedValue / screenHeight).coerceIn(0f, 1f)
+                containerCardView.alpha = lerp(startAlpha, endAlpha, fraction)
+            }
             if (affectBackground) {
                 callbacks.onBackgroundProgress(1f - animatedValue / screenHeight)
             }
