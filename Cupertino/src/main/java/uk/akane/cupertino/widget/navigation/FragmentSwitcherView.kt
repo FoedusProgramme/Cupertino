@@ -774,7 +774,11 @@ class FragmentSwitcherView @JvmOverloads constructor(
         ) {
             targetContainer?.translationX = 0F
 
-            val fm = fragmentManager ?: return
+            val fm = fragmentManager
+            if (fm == null || fm.isDestroyed) {
+                resetAnimationState(restoreCurrent = true)
+                return
+            }
 
             fm.beginTransaction().apply {
                 if (isAnimationProperlyFinished)
@@ -809,15 +813,23 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 targetContainer?.translationX = 0F
             }
 
-            targetContainer = null
-            targetFragment = null
-            currentContainer = null
-            currentFragment = null
-            isAnimationProperlyFinished = false
-            animationLoadState = LoadState.DO_NOT_LOAD
-            predictiveBackActive = false
-            hideScrim()
+            resetAnimationState(restoreCurrent = !isAnimationProperlyFinished)
         }
+    }
+
+    private fun resetAnimationState(restoreCurrent: Boolean) {
+        targetContainer?.translationX = 0F
+        currentContainer?.translationX = if (restoreCurrent) 0F else width.toFloat()
+        currentContainer?.elevation = 0F
+        currentContainer?.setBackgroundColor(0)
+        targetContainer = null
+        targetFragment = null
+        currentContainer = null
+        currentFragment = null
+        isAnimationProperlyFinished = false
+        animationLoadState = LoadState.DO_NOT_LOAD
+        predictiveBackActive = false
+        hideScrim()
     }
 
     private fun onUp(e: MotionEvent) {
