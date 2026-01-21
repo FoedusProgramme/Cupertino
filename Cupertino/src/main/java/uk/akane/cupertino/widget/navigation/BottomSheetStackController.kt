@@ -38,6 +38,11 @@ class BottomSheetStackController(
 
     private var containerId: Int = View.NO_ID
     private val containerStack = ArrayDeque<Int>()
+    private var isRemoving = false
+    private var pendingRemove = false
+
+    val hasContainers: Boolean
+        get() = containerStack.isNotEmpty()
 
     fun showContainer(fragment: Fragment) {
         if (containerStack.isNotEmpty()) return
@@ -137,6 +142,10 @@ class BottomSheetStackController(
     }
 
     private fun removeContainerInternal(affectBackground: Boolean) {
+        if (isRemoving) {
+            pendingRemove = true
+            return
+        }
         val container = rootView.findViewById<FragmentContainerView>(containerId)
             ?: return
         val isStacked = !affectBackground && containerStack.size > 1
@@ -150,6 +159,7 @@ class BottomSheetStackController(
         val screenHeight = Resources.getSystem().displayMetrics.heightPixels.toFloat()
         val startAlpha = containerCardView.alpha
         val endAlpha = if (isStacked) 0f else startAlpha
+        isRemoving = true
         if (affectBackground) {
             callbacks.onBeforeHide()
         }
@@ -174,6 +184,17 @@ class BottomSheetStackController(
                 if (affectBackground) {
                     callbacks.onAfterHide()
                 }
+                isRemoving = false
+                if (pendingRemove) {
+                    pendingRemove = false
+                    if (containerStack.isNotEmpty()) {
+                        removeContainerInternal(affectBackground = containerStack.size <= 1)
+                    }
+                }
+            },
+            doOnCancel = {
+                isRemoving = false
+                pendingRemove = false
             }
         ) { animatedValue ->
             containerCardView.translationY = animatedValue
