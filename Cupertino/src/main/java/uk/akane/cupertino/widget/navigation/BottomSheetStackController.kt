@@ -38,15 +38,16 @@ class BottomSheetStackController(
 
     private var containerId: Int = View.NO_ID
     private val containerStack = ArrayDeque<Int>()
+    private val containerAffectsBackground = ArrayDeque<Boolean>()
     private var isRemoving = false
     private var pendingRemove = false
 
     val hasContainers: Boolean
         get() = containerStack.isNotEmpty()
 
-    fun showContainer(fragment: Fragment) {
+    fun showContainer(fragment: Fragment, affectBackground: Boolean = true) {
         if (containerStack.isNotEmpty()) return
-        insertContainer(fragment, affectBackground = true)
+        insertContainer(fragment, affectBackground = affectBackground)
     }
 
     fun pushContainer(fragment: Fragment) {
@@ -62,10 +63,14 @@ class BottomSheetStackController(
     fun popContainerOrRemove() {
         if (containerStack.isEmpty()) return
         if (containerStack.size > 1) {
-            removeContainerInternal(affectBackground = false)
+            removeContainerInternal(
+                affectBackground = containerAffectsBackground.lastOrNull() ?: false
+            )
             return
         }
-        removeContainerInternal(affectBackground = true)
+        removeContainerInternal(
+            affectBackground = containerAffectsBackground.lastOrNull() ?: true
+        )
     }
 
     fun replaceContainer(fragment: Fragment) {
@@ -89,7 +94,10 @@ class BottomSheetStackController(
 
     fun removeContainer() {
         if (containerStack.isEmpty()) return
-        removeContainerInternal(affectBackground = containerStack.size <= 1)
+        removeContainerInternal(
+            affectBackground = containerAffectsBackground.lastOrNull()
+                ?: (containerStack.size <= 1)
+        )
     }
 
     private fun insertContainer(fragment: Fragment, affectBackground: Boolean) {
@@ -106,6 +114,7 @@ class BottomSheetStackController(
 
         containerId = container.id
         containerStack.addLast(container.id)
+        containerAffectsBackground.addLast(affectBackground)
         rootView.addView(container)
 
         container.post {
@@ -180,6 +189,9 @@ class BottomSheetStackController(
                 if (containerStack.isNotEmpty()) {
                     containerStack.removeLast()
                 }
+                if (containerAffectsBackground.isNotEmpty()) {
+                    containerAffectsBackground.removeLast()
+                }
                 containerId = containerStack.lastOrNull() ?: View.NO_ID
                 if (affectBackground) {
                     callbacks.onAfterHide()
@@ -188,7 +200,10 @@ class BottomSheetStackController(
                 if (pendingRemove) {
                     pendingRemove = false
                     if (containerStack.isNotEmpty()) {
-                        removeContainerInternal(affectBackground = containerStack.size <= 1)
+                        removeContainerInternal(
+                            affectBackground = containerAffectsBackground.lastOrNull()
+                                ?: (containerStack.size <= 1)
+                        )
                     }
                 }
             },
