@@ -45,19 +45,34 @@ class BottomSheetStackController(
     val hasContainers: Boolean
         get() = containerStack.isNotEmpty()
 
-    fun showContainer(fragment: Fragment, affectBackground: Boolean = true) {
+    fun showContainer(
+        fragment: Fragment,
+        affectBackground: Boolean = true,
+        showAnimationDuration: Long? = null,
+        hideAnimationDuration: Long? = null
+    ) {
         if (containerStack.isNotEmpty()) return
-        insertContainer(fragment, affectBackground = affectBackground)
+        insertContainer(
+            fragment,
+            affectBackground = affectBackground,
+            showAnimationDuration = showAnimationDuration,
+            hideAnimationDuration = hideAnimationDuration
+        )
     }
 
-    fun pushContainer(fragment: Fragment) {
+    fun pushContainer(fragment: Fragment, hideAnimationDuration: Long? = null) {
         if (containerStack.size == 1) {
             callbacks.onHideUnderlay()
         }
         containerStack.lastOrNull()?.let { previousId ->
             animateContainerScale(previousId, config.stackedSheetScale)
         }
-        insertContainer(fragment, affectBackground = false)
+        insertContainer(
+            fragment,
+            affectBackground = false,
+            showAnimationDuration = null,
+            hideAnimationDuration = hideAnimationDuration
+        )
     }
 
     fun popContainerOrRemove() {
@@ -76,7 +91,12 @@ class BottomSheetStackController(
     fun replaceContainer(fragment: Fragment) {
         val container = rootView.findViewById<FragmentContainerView>(containerId)
         if (container == null) {
-            insertContainer(fragment, affectBackground = true)
+            insertContainer(
+                fragment,
+                affectBackground = true,
+                showAnimationDuration = null,
+                hideAnimationDuration = null
+            )
             return
         }
         fragmentManager.beginTransaction()
@@ -100,7 +120,12 @@ class BottomSheetStackController(
         )
     }
 
-    private fun insertContainer(fragment: Fragment, affectBackground: Boolean) {
+    private fun insertContainer(
+        fragment: Fragment,
+        affectBackground: Boolean,
+        showAnimationDuration: Long?,
+        hideAnimationDuration: Long?
+    ) {
         val container = FragmentContainerView(activity).apply {
             id = View.generateViewId()
             layoutParams = FrameLayout.LayoutParams(
@@ -115,6 +140,9 @@ class BottomSheetStackController(
         containerId = container.id
         containerStack.addLast(container.id)
         containerAffectsBackground.addLast(affectBackground)
+        val resolvedShowDuration = showAnimationDuration ?: config.animationDuration
+        val resolvedHideDuration = hideAnimationDuration ?: config.animationDuration
+        containerHideAnimationDurations.addLast(resolvedHideDuration)
         rootView.addView(container)
 
         container.post {
@@ -135,7 +163,7 @@ class BottomSheetStackController(
                         AnimationUtils.createValAnimator<Float>(
                             containerCardView.translationY,
                             0F,
-                            duration = config.animationDuration
+                            duration = resolvedShowDuration
                         ) { animatedValue ->
                             containerCardView.translationY = animatedValue
                             if (affectBackground) {
@@ -157,6 +185,11 @@ class BottomSheetStackController(
         }
         val container = rootView.findViewById<FragmentContainerView>(containerId)
             ?: return
+        container.isClickable = false
+        container.isFocusable = false
+        container.isFocusableInTouchMode = false
+        val resolvedDuration =
+            containerHideAnimationDurations.lastOrNull() ?: config.animationDuration
         val isStacked = !affectBackground && containerStack.size > 1
         val previousContainerId = if (isStacked) {
             containerStack.elementAt(containerStack.size - 2)
@@ -180,7 +213,7 @@ class BottomSheetStackController(
         AnimationUtils.createValAnimator<Float>(
             0F,
             screenHeight,
-            duration = config.animationDuration,
+            duration = resolvedDuration,
             doOnEnd = {
                 fragmentManager.findFragmentById(container.id)?.let {
                     fragmentManager.beginTransaction().remove(it).commit()
@@ -191,6 +224,9 @@ class BottomSheetStackController(
                 }
                 if (containerAffectsBackground.isNotEmpty()) {
                     containerAffectsBackground.removeLast()
+                }
+                if (containerHideAnimationDurations.isNotEmpty()) {
+                    containerHideAnimationDurations.removeLast()
                 }
                 containerId = containerStack.lastOrNull() ?: View.NO_ID
                 if (affectBackground) {
@@ -251,6 +287,8 @@ class BottomSheetStackController(
             cardView.alpha = lerp(1f, 0.5f, t)
         }
     }
+
+    private val containerHideAnimationDurations = ArrayDeque<Long>()
 
     private fun lerp(from: Float, to: Float, fraction: Float): Float {
         return from + (to - from) * fraction
