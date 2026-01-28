@@ -288,14 +288,12 @@ class OverlaySlider @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        return if (gestureDetector.onTouchEvent(event)) {
-            true
-        } else if (event.action == MotionEvent.ACTION_UP) {
+        val handled = gestureDetector.onTouchEvent(event)
+        if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
             onUp(event)
-            true
-        } else {
-            super.onTouchEvent(event)
+            return true
         }
+        return handled || super.onTouchEvent(event)
     }
 
     private var lastMotionX = 0F
@@ -367,9 +365,6 @@ class OverlaySlider @JvmOverloads constructor(
             }
         }
 
-        if (e2.action == MotionEvent.ACTION_UP) {
-            onUp(e2)
-        }
         return true
     }
 
