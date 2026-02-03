@@ -252,6 +252,16 @@ class StarTransformButton @JvmOverloads constructor(
     override fun setChecked(checked: Boolean) {
         if (isChecked != checked) {
             isChecked = checked
+            transformAnimatorSet?.cancel()
+            transformAnimatorSet = null
+            shouldDrawCheckedBackground = checked
+            shouldDrawNormalBackground = !checked
+            shouldDrawHollowStar = !checked
+            shouldDrawFilledStar = false
+            backgroundTransformFraction = if (checked) 0f else 1f
+            hollowStarTransformFraction = 1f
+            transformFraction = HOLLOW_STAR_MINIMUM_SHRINK_FRACTION
+            invalidate()
         }
     }
 
