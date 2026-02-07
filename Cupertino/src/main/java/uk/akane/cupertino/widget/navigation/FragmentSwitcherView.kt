@@ -26,10 +26,8 @@ import uk.akane.cupertino.widget.dpToPx
 import uk.akane.cupertino.widget.lerp
 import uk.akane.cupertino.widget.runOnContentLoaded
 import uk.akane.cupertino.widget.utils.AnimationUtils
-import uk.akane.cupertino.widget.utils.AnimationUtils.doOnEnd
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-import android.view.animation.AnimationUtils as AndroidAnimationUtils
 
 class FragmentSwitcherView @JvmOverloads constructor(
     context: Context,
@@ -68,9 +66,6 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private val baseFragments: MutableList<Fragment> = mutableListOf()
     private val subFragmentStack: MutableList<MutableList<Fragment>> = mutableListOf()
     private var currentBaseFragment: Int = 0
-
-    private val fadeInAnimation = AndroidAnimationUtils.loadAnimation(context, R.anim.fade_in)
-    private val fadeOutAnimation = AndroidAnimationUtils.loadAnimation(context, R.anim.fade_out)
 
     private var surfaceColor: Int = 0
 
@@ -468,6 +463,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
                         // Let's update our status.
                         activeContainer = endContainer
                         currentBaseFragment = newFragmentIndex
+                        enforceSingleVisibleTopFragment()
                     }
                     .commit()
             }
@@ -502,25 +498,48 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
                 transactionShrink()
                 fm.beginTransaction()
+                    .setCustomAnimations(R.anim.fade_in, R.anim.fade_out)
                     .show(endFragment)
+                    .hide(startFragment)
                     .runOnCommit {
-                        // Let's hide our start container after animation ended.
-                        startContainerEntity.startAnimation(fadeOutAnimation.doOnEnd {
-                            // Now let's hide start fragment.
-                            fm.beginTransaction()
-                                .hide(startFragment)
-                                .commit()
-                        })
-                        endContainerEntity.startAnimation(fadeInAnimation)
-
                         // Let's update our status.
                         activeContainer = endContainer
                         currentBaseFragment = newFragmentIndex
+                        enforceSingleVisibleTopFragment()
                     }
                     .commit()
             }
         }
 
+    }
+
+    private fun enforceSingleVisibleTopFragment() {
+        val fm = fragmentManager ?: return
+        if (currentBaseFragment !in baseFragments.indices) return
+        val visibleFragment = subFragmentStack
+            .getOrNull(currentBaseFragment)
+            ?.lastOrNull()
+            ?: baseFragments[currentBaseFragment]
+        val allFragments = buildList {
+            addAll(baseFragments)
+            subFragmentStack.forEach { addAll(it) }
+        }.distinct()
+        fm.beginTransaction().apply {
+            allFragments.forEach { fragment ->
+                if (!fragment.isAdded) return@forEach
+                if (fragment == visibleFragment) {
+                    show(fragment)
+                } else {
+                    hide(fragment)
+                }
+            }
+        }.apply {
+            if (fm.isStateSaved) {
+                commitAllowingStateLoss()
+            } else {
+                commit()
+            }
+        }
     }
 
     fun popBackTargetStack(index: Int) {
