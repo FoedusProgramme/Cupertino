@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.LinearInterpolator
+import android.view.animation.PathInterpolator
 import android.view.WindowInsets
 import android.widget.FrameLayout
 import androidx.core.view.WindowInsetsCompat
@@ -52,7 +53,6 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private var activeContainer: ContainerType = ContainerType.DEFAULT_CONTAINER
 
     private val minFlingVelocity = ViewConfiguration.get(context).scaledMinimumFlingVelocity
-    private val maxScrimAlpha = 0.4f
     private val maxOverscrollFraction = 0.6f
     private val overscrollResistance = 1f
     private val backCommitThreshold = 0.5f
@@ -68,8 +68,26 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private var currentBaseFragment: Int = 0
 
     private var surfaceColor: Int = 0
+    private var activeTransitionProfile = CUPERTINO_TRANSITION_PROFILE
 
     var onStackChangeListener: (() -> Unit)? = null
+
+    private data class TransitionProfile(
+        val parallaxFactor: Float,
+        val duration: Long,
+        val interpolator: TimeInterpolator,
+        val maxScrimAlpha: Float
+    )
+
+    private fun resolveTransitionProfile(fragment: Fragment?): TransitionProfile {
+        val style = (fragment as? FragmentSwitcherTransitionProvider)
+            ?.fragmentSwitcherTransitionStyle
+            ?: FragmentSwitcherTransitionStyle.CUPERTINO
+        return when (style) {
+            FragmentSwitcherTransitionStyle.CUPERTINO -> CUPERTINO_TRANSITION_PROFILE
+            FragmentSwitcherTransitionStyle.DEFAULT -> DEFAULT_TRANSITION_PROFILE
+        }
+    }
 
     init {
         @Suppress("UsePropertyAccessSyntax")
@@ -283,6 +301,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
                     startContainer,
                     endContainer,
                     currentFragment,
+                    fragment,
                     fm,
                     nextContainerType
                 )
@@ -294,15 +313,19 @@ class FragmentSwitcherView @JvmOverloads constructor(
         startContainer: View,
         endContainer: View,
         currentFragment: Fragment,
+        nextFragment: Fragment,
         fm: FragmentManager,
         nextContainerType: ContainerType
     ) {
+        activeTransitionProfile = resolveTransitionProfile(nextFragment)
         addValueAnimator?.cancel()
         addValueAnimator = null
 
         addValueAnimator = AnimationUtils.createValAnimator(
             width.toFloat(),
             0F,
+            duration = activeTransitionProfile.duration,
+            interpolator = activeTransitionProfile.interpolator,
             doOnEnd = {
                 // Reset end container.
                 endContainer.elevation = 0F
@@ -319,7 +342,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 addValueAnimator = null
             }
         ) {
-            startContainer.translationX = -(width.toFloat() - it) / 3F
+            startContainer.translationX = -(width.toFloat() - it) * activeTransitionProfile.parallaxFactor
             endContainer.translationX = it
         }
     }
@@ -589,7 +612,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
         if (scrimView.visibility != View.VISIBLE) {
             scrimView.visibility = View.VISIBLE
         }
-        scrimView.alpha = lerp(maxScrimAlpha, 0f, progress)
+        scrimView.alpha = lerp(activeTransitionProfile.maxScrimAlpha, 0f, progress)
     }
 
     private fun hideScrim() {
@@ -605,7 +628,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private fun applyTranslation(translationX: Float) {
         currentContainer?.translationX = translationX
         targetContainer?.translationX = if (translationX >= 0F) {
-            -(width.toFloat() - translationX) / 3F
+            -(width.toFloat() - translationX) * activeTransitionProfile.parallaxFactor
         } else {
             -width.toFloat()
         }
@@ -625,6 +648,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
         targetFragmentIndex = if (list.size - 2 >= 0) list.size - 2 else -1
         currentFragment = list[list.size - 1]
         currentFragmentIndex = list.size - 1
+        activeTransitionProfile = resolveTransitionProfile(currentFragment)
 
         targetContainer = if (activeContainer == ContainerType.DEFAULT_CONTAINER) containerAppend else containerDefault
         currentContainer = getContainer(activeContainer)
@@ -656,8 +680,8 @@ class FragmentSwitcherView @JvmOverloads constructor(
     private fun animateBackTo(
         targetTranslation: Float,
         finish: Boolean,
-        duration: Long = AnimationUtils.FAST_DURATION,
-        interpolator: TimeInterpolator = AnimationUtils.fastOutSlowInInterpolator
+        duration: Long = activeTransitionProfile.duration,
+        interpolator: TimeInterpolator = activeTransitionProfile.interpolator
     ) {
         currentAnimator?.cancel()
         val startTranslation = currentContainer?.translationX ?: return
@@ -749,7 +773,12 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
             val shouldFinish = velocityX > minVelocity
             val target = if (shouldFinish) width.toFloat() else 0F
-            animateBackTo(target, finish = shouldFinish, duration = supposedDuration)
+            animateBackTo(
+                target,
+                finish = shouldFinish,
+                duration = supposedDuration,
+                interpolator = activeTransitionProfile.interpolator
+            )
         }
         return true
     }
@@ -848,6 +877,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
         isAnimationProperlyFinished = false
         animationLoadState = LoadState.DO_NOT_LOAD
         predictiveBackActive = false
+        activeTransitionProfile = CUPERTINO_TRANSITION_PROFILE
         hideScrim()
     }
 
@@ -871,6 +901,8 @@ class FragmentSwitcherView @JvmOverloads constructor(
         removeValueAnimator = AnimationUtils.createValAnimator<Float>(
             currentContainer!!.translationX,
             width.toFloat(),
+            duration = activeTransitionProfile.duration,
+            interpolator = activeTransitionProfile.interpolator,
             doOnEnd = {
                 isAnimationProperlyFinished = true
                 onAnimationFinished()
@@ -1028,6 +1060,25 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
         const val MINIMUM_ANIMATION_TIME = 220L
         const val MAXIMUM_ANIMATION_TIME = 320L
+        private const val CUPERTINO_DURATION = 500L
+        private const val DEFAULT_PARALLAX_FACTOR = 1f / 3f
+        private const val CUPERTINO_PARALLAX_FACTOR = 0.25f
+        private const val DEFAULT_MAX_SCRIM_ALPHA = 0.4f
+        private const val CUPERTINO_MAX_SCRIM_ALPHA = 0.25f
+
+        private val DEFAULT_TRANSITION_PROFILE = TransitionProfile(
+            parallaxFactor = DEFAULT_PARALLAX_FACTOR,
+            duration = AnimationUtils.FAST_DURATION,
+            interpolator = AnimationUtils.fastOutSlowInInterpolator,
+            maxScrimAlpha = DEFAULT_MAX_SCRIM_ALPHA
+        )
+
+        private val CUPERTINO_TRANSITION_PROFILE = TransitionProfile(
+            parallaxFactor = CUPERTINO_PARALLAX_FACTOR,
+            duration = CUPERTINO_DURATION,
+            interpolator = PathInterpolator(0.2833f, 0.99f, 0.31833f, 0.99f),
+            maxScrimAlpha = CUPERTINO_MAX_SCRIM_ALPHA
+        )
     }
 
 }
