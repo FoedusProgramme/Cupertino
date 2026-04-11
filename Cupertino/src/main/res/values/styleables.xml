@@ -29,6 +29,7 @@
 
     <declare-styleable name="OverlaySlider">
         <attr name="momentum" format="boolean" />
+        <attr name="fakeMomentum" format="boolean" />
         <attr name="overshoot" format="boolean" />
         <attr name="resizeFactor" format="float" />
         <attr name="sidePadding" format="dimension" />

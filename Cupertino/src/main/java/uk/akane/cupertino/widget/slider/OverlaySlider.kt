@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.animation.addListener
 import androidx.core.view.doOnLayout
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
@@ -39,9 +40,16 @@ class OverlaySlider @JvmOverloads constructor(
     private var squeezeFraction: Float = 0F
     private var flingFraction: Float = 0F
 
+    val isMomentumFlingOngoing: Boolean
+        get() = flingValueAnimator?.isRunning ?: false
+
     var valueTo = 100F
     var valueFrom = 0F
     var value = 20F
+        set(value) {
+            field = value
+            invalidate()
+        }
 
     private val normalizedValue
         get() = ((value - valueFrom) / (valueTo - valueFrom)).coerceIn(0F, 1F)
@@ -62,6 +70,7 @@ class OverlaySlider @JvmOverloads constructor(
     private var progressCurrentColor = 0
 
     private var enableMomentum = true
+    private var enableFakeMomentum = false
     private var enableOverShoot = false
     private var heightResizeFactor: Float = 2.25F
 
@@ -80,6 +89,7 @@ class OverlaySlider @JvmOverloads constructor(
 
         context.obtainStyledAttributes(attrs, R.styleable.OverlaySlider).apply {
             enableMomentum = getBoolean(R.styleable.OverlaySlider_momentum, true)
+            enableFakeMomentum = getBoolean(R.styleable.OverlaySlider_fakeMomentum, false)
             enableOverShoot = getBoolean(R.styleable.OverlaySlider_overshoot, false)
             heightResizeFactor = getFloat(R.styleable.OverlaySlider_resizeFactor, HEIGHT_RESIZE_FACTOR_DEFAULT)
             actualSidePadding = getDimensionPixelSize(R.styleable.OverlaySlider_sidePadding, 16.dpToPx(context)).toFloat()
@@ -306,6 +316,9 @@ class OverlaySlider @JvmOverloads constructor(
     private var triggerOvershootTransitionMark = 0
     private var isTracking = false
 
+    val isUserTracking: Boolean
+        get() = isTracking
+
     override fun onScroll(
         e1: MotionEvent?,
         e2: MotionEvent,
@@ -327,7 +340,7 @@ class OverlaySlider @JvmOverloads constructor(
             calculateNormalValue(progressMoved)
         }
 
-        notifyValueChanged(true)
+        notifyValueChanged()
         return true
     }
 
@@ -357,9 +370,12 @@ class OverlaySlider @JvmOverloads constructor(
                     flingFraction = animatedValue as Float
                     value = (flingStartValue + flingFraction * distance * (if (lastVelocity < 0) -1 else 1))
                         .coerceIn(valueFrom, valueTo)
-                    invalidate()
-                    notifyValueChanged(true)
+                    notifyValueChanged()
                 }
+
+                addListener(onEnd = {
+                    valueChangeListeners.forEach { it.onStopFlinging(this@OverlaySlider, value) }
+                })
 
                 start()
             }
@@ -379,7 +395,6 @@ class OverlaySlider @JvmOverloads constructor(
 
             if (value != valueFrom) {
                 value = valueFrom
-                invalidate()
             }
 
             triggeredOvershootXLeft = if (triggeredOvershootXLeft == 0F) {
@@ -405,7 +420,6 @@ class OverlaySlider @JvmOverloads constructor(
 
             if (value != valueTo) {
                 value = valueTo
-                invalidate()
             }
 
             triggeredOvershootXRight = if (triggeredOvershootXRight == 0F) {
@@ -437,7 +451,6 @@ class OverlaySlider @JvmOverloads constructor(
     private fun calculateNormalValue(progressMoved: Float) {
         triggerOvershootTransitionMark = 0
         value = (value + progressMoved).coerceIn(valueFrom, valueTo)
-        invalidate()
     }
 
     fun updateListeners() {
@@ -515,8 +528,8 @@ class OverlaySlider @JvmOverloads constructor(
         valueChangeListeners.add(listener)
     }
 
-    private fun notifyValueChanged(fromUser: Boolean) {
-        valueChangeListeners.forEach { it.onValueChanged(this, value, fromUser) }
+    private fun notifyValueChanged() {
+        valueChangeListeners.forEach { it.onValueChanged(this, value, isTracking, isMomentumFlingOngoing) }
     }
 
     companion object {
@@ -532,8 +545,9 @@ class OverlaySlider @JvmOverloads constructor(
 
     interface ValueChangeListener {
         fun onStartTracking(slider: OverlaySlider) {}
-        fun onValueChanged(slider: OverlaySlider, value: Float, fromUser: Boolean) {}
+        fun onValueChanged(slider: OverlaySlider, value: Float, fromUser: Boolean, fromMomentum: Boolean) {}
         fun onStopTracking(slider: OverlaySlider) {}
+        fun onStopFlinging(slider: OverlaySlider, value: Float) {}
     }
 
 }
