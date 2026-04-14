@@ -50,7 +50,7 @@ class OverlaySlider @JvmOverloads constructor(
             if (field == value) return
             field = value
             notifyValueChanged()
-            requestSliderUpdate()
+            postInvalidate()
         }
 
     private val normalizedValue
@@ -112,12 +112,6 @@ class OverlaySlider @JvmOverloads constructor(
         canvas.clipPath(outerPath)
         drawProgress(canvas, defaultPaint)
         drawOuterBound(canvas, defaultPaint)
-    }
-
-    private fun requestSliderUpdate() {
-        if (redrawScheduled) return
-        redrawScheduled = true
-        postInvalidateOnAnimation()
     }
 
     private var calculatedLeft = 0F
@@ -247,7 +241,7 @@ class OverlaySlider @JvmOverloads constructor(
 
                 updateTrackBound(currentHeight, currentSidePadding)
                 updateListeners()
-                requestSliderUpdate()
+                postInvalidate()
             }
 
             start()
