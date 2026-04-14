@@ -47,8 +47,10 @@ class OverlaySlider @JvmOverloads constructor(
     var valueFrom = 0F
     var value = 20F
         set(value) {
+            if (field == value) return
             field = value
-            invalidate()
+            notifyValueChanged()
+            requestSliderUpdate()
         }
 
     private val normalizedValue
@@ -70,7 +72,6 @@ class OverlaySlider @JvmOverloads constructor(
     private var progressCurrentColor = 0
 
     private var enableMomentum = true
-    private var enableFakeMomentum = false
     private var enableOverShoot = false
     private var heightResizeFactor: Float = 2.25F
 
@@ -89,7 +90,6 @@ class OverlaySlider @JvmOverloads constructor(
 
         context.obtainStyledAttributes(attrs, R.styleable.OverlaySlider).apply {
             enableMomentum = getBoolean(R.styleable.OverlaySlider_momentum, true)
-            enableFakeMomentum = getBoolean(R.styleable.OverlaySlider_fakeMomentum, false)
             enableOverShoot = getBoolean(R.styleable.OverlaySlider_overshoot, false)
             heightResizeFactor = getFloat(R.styleable.OverlaySlider_resizeFactor, HEIGHT_RESIZE_FACTOR_DEFAULT)
             actualSidePadding = getDimensionPixelSize(R.styleable.OverlaySlider_sidePadding, 16.dpToPx(context)).toFloat()
@@ -104,12 +104,20 @@ class OverlaySlider @JvmOverloads constructor(
     private var currentSidePadding: Float = 0F
     private val sideOverShootFingerBound: Float = 100F.dpToPx(context)
     private val sideOverShootTransition: Float = 8F.dpToPx(context)
+    private var redrawScheduled = false
 
     override fun onDraw(canvas: Canvas) {
+        redrawScheduled = false
         super.onDraw(canvas)
         canvas.clipPath(outerPath)
         drawProgress(canvas, defaultPaint)
         drawOuterBound(canvas, defaultPaint)
+    }
+
+    private fun requestSliderUpdate() {
+        if (redrawScheduled) return
+        redrawScheduled = true
+        postInvalidateOnAnimation()
     }
 
     private var calculatedLeft = 0F
@@ -239,7 +247,7 @@ class OverlaySlider @JvmOverloads constructor(
 
                 updateTrackBound(currentHeight, currentSidePadding)
                 updateListeners()
-                invalidate()
+                requestSliderUpdate()
             }
 
             start()
@@ -340,7 +348,6 @@ class OverlaySlider @JvmOverloads constructor(
             calculateNormalValue(progressMoved)
         }
 
-        notifyValueChanged()
         return true
     }
 
@@ -370,7 +377,6 @@ class OverlaySlider @JvmOverloads constructor(
                     flingFraction = animatedValue as Float
                     value = (flingStartValue + flingFraction * distance * (if (lastVelocity < 0) -1 else 1))
                         .coerceIn(valueFrom, valueTo)
-                    notifyValueChanged()
                 }
 
                 addListener(onEnd = {
