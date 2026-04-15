@@ -7,7 +7,6 @@ import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -30,6 +29,45 @@ import uk.akane.cupertino.widget.utils.AnimationUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * A two-container fragment navigator for applications that combine bottom-tab
+ * base pages with push-style detail pages.
+ *
+ * `FragmentSwitcherView` owns two internal fragment containers:
+ *
+ * - [ContainerType.DEFAULT_CONTAINER], used by base fragments and even-depth
+ *   pushed fragments.
+ * - [ContainerType.APPEND_CONTAINER], used by odd-depth pushed fragments.
+ *
+ * Base fragments are registered once through [setup]. Each base fragment owns
+ * an independent stack of sub-fragments. Calling [switchBaseFragment] changes
+ * the active base stack, while [addFragmentToCurrentStack] pushes a detail
+ * fragment on top of the currently selected base stack. The navigator alternates
+ * pushed fragments between the two containers so that forward and back
+ * transitions can animate one container over the other without recreating the
+ * whole tab hierarchy.
+ *
+ * The view is also responsible for interactive back gestures. It supports both
+ * its own edge-drag handling and externally driven predictive back calls through
+ * [startPredictiveBack], [updatePredictiveBack], [cancelPredictiveBack], and
+ * [commitPredictiveBack]. Non-interactive callers can use
+ * [popBackTopFragmentIfExists] to animate the top sub-fragment away.
+ *
+ * Navigation operations are intentionally serialized. While a push animation,
+ * pop animation, predictive back gesture, or tab switch is in progress,
+ * [isNavigationInProgress] reports `true` and new stack operations are ignored.
+ * Activity-level back handlers should consume system back events during this
+ * period instead of delegating them to the platform, otherwise Android may exit
+ * the activity while the navigator is still settling its fragment transactions.
+ *
+ * Fragments may optionally implement [FragmentSwitcherTransitionProvider] to
+ * select the transition profile used when they are pushed or popped. The default
+ * profile follows a Cupertino-style parallax transition.
+ *
+ * State saving stores fragment tags and the active container index. Therefore
+ * fragments managed by this view must remain discoverable from the owning
+ * [FragmentManager] after process or configuration-state restoration.
+ */
 class FragmentSwitcherView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -105,6 +143,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     private var firstRun: Boolean = true
+    private var isAddingFragmentToStack: Boolean = false
 
     fun setup(
         activity: FragmentActivity,
@@ -185,11 +224,6 @@ class FragmentSwitcherView @JvmOverloads constructor(
             }
         }
 
-        Log.d(
-            TAG,
-            "onRestoreInstanceState: ${state.subFragmentStackTags}, ${state.baseFragmentTags}, ${state.currentBaseFragment}"
-        )
-
     }
 
     private class SavedState : BaseSavedState {
@@ -253,7 +287,9 @@ class FragmentSwitcherView @JvmOverloads constructor(
     fun addFragmentToCurrentStack(
         fragment: Fragment
     ) {
-        if (addValueAnimator?.isRunning == true) return
+        if (isNavigationBusy()) {
+            return
+        }
         // State 1: This sub-fragment is being added to
         // DEFAULT_CONTAINER.
         //
@@ -291,12 +327,15 @@ class FragmentSwitcherView @JvmOverloads constructor(
         endContainer.elevation = 10F.dpToPx(context)
         endContainer.setBackgroundColor(surfaceColor)
 
-        // Make sure to record target fragment.
-        targetStackList.add(fragment)
+        isAddingFragmentToStack = true
 
         fm.beginTransaction()
             .add(endContainer.id, fragment, Uuid.random().toString())
             .runOnContentLoaded(fragment) {
+                // Make sure to record target fragment only once it is ready
+                // to join navigation. Until then, back should still target
+                // the currently visible page.
+                targetStackList.add(fragment)
                 addAnimation(
                     startContainer,
                     endContainer,
@@ -334,12 +373,20 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 // Hide container under.
                 fm.beginTransaction()
                     .hide(currentFragment)
-                    .commit()
+                    .apply {
+                        if (fm.isStateSaved) {
+                            commitAllowingStateLoss()
+                            fm.executePendingTransactions()
+                        } else {
+                            commitNow()
+                        }
+                    }
 
                 startContainer.translationX = width.toFloat()
                 activeContainer = nextContainerType
 
                 addValueAnimator = null
+                isAddingFragmentToStack = false
             }
         ) {
             startContainer.translationX = -(width.toFloat() - it) * activeTransitionProfile.parallaxFactor
@@ -362,6 +409,9 @@ class FragmentSwitcherView @JvmOverloads constructor(
             currentAnimator?.doOnEnd {
                 switchBaseFragment(newFragmentIndex)
             }
+            return
+        }
+        if (isNavigationBusy()) {
             return
         }
         // State 1: Need to pop stacks till its empty.
@@ -392,6 +442,17 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 FragmentType.SUB_FRAGMENT_E
             else
                 FragmentType.SUB_FRAGMENT_O
+        val expectedStartContainer = getExpectedContainer(startFragmentType)
+        if (activeContainer != expectedStartContainer) {
+            activeContainer = expectedStartContainer
+            getContainer(activeContainer).translationX = 0F
+            getContainer(
+                if (activeContainer == ContainerType.DEFAULT_CONTAINER)
+                    ContainerType.APPEND_CONTAINER
+                else
+                    ContainerType.DEFAULT_CONTAINER
+            ).translationX = width.toFloat()
+        }
         val startContainer = activeContainer
         val startContainerEntity = getContainer(startContainer)
 
@@ -536,7 +597,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     }
 
-    private fun enforceSingleVisibleTopFragment() {
+    private fun enforceSingleVisibleTopFragment(commitNow: Boolean = false) {
         val fm = fragmentManager ?: return
         if (currentBaseFragment !in baseFragments.indices) return
         val visibleFragment = subFragmentStack
@@ -559,6 +620,11 @@ class FragmentSwitcherView @JvmOverloads constructor(
         }.apply {
             if (fm.isStateSaved) {
                 commitAllowingStateLoss()
+                if (commitNow) {
+                    fm.executePendingTransactions()
+                }
+            } else if (commitNow) {
+                commitNow()
             } else {
                 commit()
             }
@@ -600,17 +666,26 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     val currentStackSize: Int get() = subFragmentStack.getOrNull(currentBaseFragment)?.size ?: 0
 
+    val isNavigationInProgress: Boolean get() = isNavigationBusy()
+
     private fun getContainer(containerType: ContainerType): FrameLayout =
         when (containerType) {
             ContainerType.DEFAULT_CONTAINER -> containerDefault
             ContainerType.APPEND_CONTAINER -> containerAppend
         }
 
+    private fun getExpectedContainer(fragmentType: FragmentType): ContainerType =
+        when (fragmentType) {
+            FragmentType.BASE_FRAGMENT,
+            FragmentType.SUB_FRAGMENT_E -> ContainerType.DEFAULT_CONTAINER
+            FragmentType.SUB_FRAGMENT_O -> ContainerType.APPEND_CONTAINER
+        }
+
     fun canPopBack(): Boolean = currentBaseFragment in subFragmentStack.indices && subFragmentStack[currentBaseFragment].isNotEmpty()
 
     private fun showScrim(progress: Float) {
-        if (scrimView.visibility != View.VISIBLE) {
-            scrimView.visibility = View.VISIBLE
+        if (scrimView.visibility != VISIBLE) {
+            scrimView.visibility = VISIBLE
         }
         scrimView.alpha = lerp(activeTransitionProfile.maxScrimAlpha, 0f, progress)
     }
@@ -637,8 +712,12 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     private fun prepareBackGesture(): Boolean {
         if (animationLoadState == LoadState.ALREADY_LOADED) return true
-        if (currentBaseFragment !in subFragmentStack.indices || subFragmentStack[currentBaseFragment].isEmpty()) return false
-        if (addValueAnimator?.isRunning == true || removeValueAnimator?.isRunning == true) return false
+        if (currentBaseFragment !in subFragmentStack.indices || subFragmentStack[currentBaseFragment].isEmpty()) {
+            return false
+        }
+        if (isAddingFragmentToStack || addValueAnimator?.isRunning == true || removeValueAnimator?.isRunning == true) {
+            return false
+        }
 
         currentAnimator?.cancel()
         currentAnimator = null
@@ -706,7 +785,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     fun updatePredictiveBack(progress: Float) {
-        if (!predictiveBackActive && !prepareBackGesture()) return
+        if (!predictiveBackActive) return
         val clamped = progress.coerceIn(0f, 1f)
         applyTranslation(width.toFloat() * clamped)
     }
@@ -720,7 +799,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     fun commitPredictiveBack(): Boolean {
-        if (!predictiveBackActive && !prepareBackGesture()) return false
+        if (!predictiveBackActive) return false
         animateBackTo(width.toFloat(), finish = true)
         return true
     }
@@ -743,9 +822,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
         val currentStack = subFragmentStack.getOrNull(currentBaseFragment)
         if (currentStack != null && currentStack.isNotEmpty() &&
             animationLoadState == LoadState.DO_NOT_LOAD &&
-            addValueAnimator?.isRunning != true &&
-            removeValueAnimator?.isRunning != true &&
-            currentAnimator?.isRunning != true
+            !isNavigationBusy()
         ) {
             animationLoadState = LoadState.SHOULD_LOAD
         }
@@ -847,8 +924,12 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
             // Also remove the fragment from our stack, log everything we needed
             if (isAnimationProperlyFinished) {
-                if (subFragmentStack[currentBaseFragment].isNotEmpty()) {
-                    subFragmentStack[currentBaseFragment].removeAt(subFragmentStack[currentBaseFragment].lastIndex)
+                val currentStack = subFragmentStack.getOrNull(currentBaseFragment)
+                if (currentStack != null) {
+                    val removed = currentStack.remove(currentFragment)
+                    if (!removed && currentStack.isNotEmpty()) {
+                        currentStack.removeAt(currentStack.lastIndex)
+                    }
                 }
                 onStackChangeListener?.invoke()
                 activeContainer =
@@ -861,6 +942,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 targetContainer?.translationX = 0F
             }
 
+            enforceSingleVisibleTopFragment(commitNow = true)
             resetAnimationState(restoreCurrent = !isAnimationProperlyFinished)
         }
     }
@@ -894,6 +976,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     fun popBackTopFragmentIfExists(): Boolean {
         if (removeValueAnimator?.isRunning == true) return false
+        if (isAddingFragmentToStack || addValueAnimator?.isRunning == true) return false
 
         if (!prepareBackGesture()) return false
 
@@ -914,6 +997,13 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
         return true
     }
+
+    private fun isNavigationBusy(): Boolean =
+        isAddingFragmentToStack ||
+            addValueAnimator?.isRunning == true ||
+            removeValueAnimator?.isRunning == true ||
+            currentAnimator?.isRunning == true ||
+            animationLoadState != LoadState.DO_NOT_LOAD
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -1056,8 +1146,6 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     companion object {
-        private const val TAG = "FragmentSwitcherView"
-
         const val MINIMUM_ANIMATION_TIME = 220L
         const val MAXIMUM_ANIMATION_TIME = 320L
         private const val CUPERTINO_DURATION = 500L
