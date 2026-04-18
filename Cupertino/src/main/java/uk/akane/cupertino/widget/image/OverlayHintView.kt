@@ -11,7 +11,7 @@ import android.view.View
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.getOverlayLayerColor
 import uk.akane.cupertino.widget.lerp
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 class OverlayHintView @JvmOverloads constructor(
     context: Context,

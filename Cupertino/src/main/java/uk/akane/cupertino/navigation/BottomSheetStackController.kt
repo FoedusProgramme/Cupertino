@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget.navigation
+package uk.akane.cupertino.navigation
 
 import android.content.res.Resources
 import android.view.View
@@ -10,7 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.card.MaterialCardView
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 class BottomSheetStackController(
     private val activity: AppCompatActivity,

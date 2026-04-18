@@ -10,10 +10,10 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import androidx.appcompat.content.res.AppCompatResources
 import uk.akane.cupertino.R
-import uk.akane.cupertino.widget.base.ShrinkableView
+import uk.akane.cupertino.base.ShrinkableView
 import uk.akane.cupertino.widget.getOverlayLayerColor
 import uk.akane.cupertino.widget.getShadeLayerColor
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 class AnimatedVectorButton @JvmOverloads constructor(
     context: Context,

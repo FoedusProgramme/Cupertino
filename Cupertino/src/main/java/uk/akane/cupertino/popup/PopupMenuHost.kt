@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget.popup
+package uk.akane.cupertino.popup
 
 import android.graphics.RectF
 import android.view.View

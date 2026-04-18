@@ -1,5 +1,6 @@
-package uk.akane.cupertino.widget.loading
+package uk.akane.cupertino.widget.special
 
+import android.R
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
@@ -10,23 +11,22 @@ import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.ProgressBar
 import androidx.core.graphics.ColorUtils
-import uk.akane.cupertino.R
-import kotlin.math.min
-import kotlin.math.roundToInt
 import androidx.core.graphics.withRotation
 import androidx.core.view.isVisible
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 class CupertinoActivityIndicatorView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = android.R.attr.progressBarStyle
+    defStyleAttr: Int = R.attr.progressBarStyle
 ) : ProgressBar(context, attrs, defStyleAttr) {
 
     private val segmentPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val segmentRect = RectF()
 
     private val defaultSizePx = 30f * resources.displayMetrics.density
-    private val fallbackColor = resources.getColor(R.color.onSurfaceColorSolid, context.theme)
+    private val fallbackColor = resources.getColor(uk.akane.cupertino.R.color.onSurfaceColorSolid, context.theme)
 
     private var animatedStep = 0f
     private var animator: ValueAnimator? = null

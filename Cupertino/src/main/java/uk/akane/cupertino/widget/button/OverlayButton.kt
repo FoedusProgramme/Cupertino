@@ -20,9 +20,10 @@ import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.getViewLayer
 import uk.akane.cupertino.widget.getOverlayLayerColor
 import uk.akane.cupertino.widget.getShadeLayerColor
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 class OverlayButton @JvmOverloads constructor(
     context: Context,
@@ -30,9 +31,15 @@ class OverlayButton @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr), Checkable {
 
-    var textViewLayer: Int = 0
+    var viewLayer: Int = 0
         set(value) {
             field = value
+            overlayColorFilter = PorterDuffColorFilter(
+                resources.getOverlayLayerColor(value), PorterDuff.Mode.SRC_IN
+            )
+            shadeColorFilter = PorterDuffColorFilter(
+                resources.getShadeLayerColor(value), PorterDuff.Mode.SRC_IN
+            )
             invalidate()
             requestLayout()
         }
@@ -62,7 +69,7 @@ class OverlayButton @JvmOverloads constructor(
         context.obtainStyledAttributes(attrs, R.styleable.OverlayButton).apply {
             iconDrawable = getDrawable(R.styleable.OverlayButton_icon)
             iconSize = getDimensionPixelSize(R.styleable.OverlayButton_iconSize, 0)
-            textViewLayer = getInt(R.styleable.OverlayButton_viewLayer, 0)
+            viewLayer = getViewLayer(R.styleable.OverlayButton_viewLayer, 0)
             recycle()
         }
 
@@ -93,11 +100,11 @@ class OverlayButton @JvmOverloads constructor(
         drawable.draw(bitmapCanvas!!)
     }
 
-    private val overlayColorFilter = PorterDuffColorFilter(
-        resources.getOverlayLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN
+    private var overlayColorFilter = PorterDuffColorFilter(
+        resources.getOverlayLayerColor(viewLayer), PorterDuff.Mode.SRC_IN
     )
-    private val shadeColorFilter = PorterDuffColorFilter(
-        resources.getShadeLayerColor(textViewLayer), PorterDuff.Mode.SRC_IN
+    private var shadeColorFilter = PorterDuffColorFilter(
+        resources.getShadeLayerColor(viewLayer), PorterDuff.Mode.SRC_IN
     )
     private val holdingColorFilter = PorterDuffColorFilter(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
 

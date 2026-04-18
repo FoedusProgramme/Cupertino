@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget.base
+package uk.akane.cupertino.base
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -7,7 +7,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.animation.doOnEnd
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 @SuppressLint("ClickableViewAccessibility")
 open class ShrinkableView @JvmOverloads constructor(

@@ -18,7 +18,7 @@ import androidx.core.view.doOnLayout
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
 import uk.akane.cupertino.widget.lerp
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min

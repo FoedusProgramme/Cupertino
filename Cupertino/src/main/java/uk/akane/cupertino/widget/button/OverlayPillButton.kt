@@ -18,12 +18,12 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
-import uk.akane.cupertino.widget.base.ShrinkableView
+import uk.akane.cupertino.base.ShrinkableView
 import uk.akane.cupertino.widget.dpToPx
 import uk.akane.cupertino.widget.getOverlayLayerColor
 import uk.akane.cupertino.widget.getShadeLayerColor
-import uk.akane.cupertino.widget.utils.AnimationUtils
-import uk.akane.cupertino.widget.utils.AnimationUtils.MID_DURATION
+import uk.akane.cupertino.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils.MID_DURATION
 
 class OverlayPillButton @JvmOverloads constructor(
     context: Context,

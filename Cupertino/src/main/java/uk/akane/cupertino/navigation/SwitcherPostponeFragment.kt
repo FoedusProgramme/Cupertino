@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget.navigation
+package uk.akane.cupertino.navigation
 
 import androidx.fragment.app.Fragment
 

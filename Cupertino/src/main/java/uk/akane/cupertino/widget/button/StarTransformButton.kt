@@ -22,9 +22,9 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.alphaFromArgb
-import uk.akane.cupertino.widget.base.ShrinkableView
+import uk.akane.cupertino.base.ShrinkableView
 import uk.akane.cupertino.widget.dpToPx
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 class StarTransformButton @JvmOverloads constructor(
     context: Context,

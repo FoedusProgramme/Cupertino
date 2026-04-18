@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget.navigation
+package uk.akane.cupertino.navigation
 
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
@@ -11,6 +11,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import android.view.WindowInsets
@@ -25,7 +26,8 @@ import uk.akane.cupertino.R
 import uk.akane.cupertino.widget.dpToPx
 import uk.akane.cupertino.widget.lerp
 import uk.akane.cupertino.widget.runOnContentLoaded
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
+import kotlin.math.abs
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -692,7 +694,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     private fun hideScrim() {
         scrimView.alpha = 0f
-        scrimView.visibility = View.GONE
+        scrimView.visibility = GONE
     }
 
     private fun updateScrimFromTranslation(translationX: Float) {
@@ -857,7 +859,7 @@ class FragmentSwitcherView @JvmOverloads constructor(
     ): Boolean {
         if (animationLoadState == LoadState.ALREADY_LOADED) {
             val minVelocity = minFlingVelocity.toFloat()
-            val absVelocity = kotlin.math.abs(velocityX).coerceAtLeast(minVelocity)
+            val absVelocity = abs(velocityX).coerceAtLeast(minVelocity)
             val supposedDuration =
                 ((width / absVelocity) * 1000)
                     .toLong()
@@ -1086,12 +1088,12 @@ class FragmentSwitcherView @JvmOverloads constructor(
                 val dy = ev.y - edgeStartY
                 if (isEdgeSwipeActive) return true
                 if (!isEdgeSwipeActive) {
-                    if (kotlin.math.abs(dy) > touchSlop && kotlin.math.abs(dy) > kotlin.math.abs(dx)) {
+                    if (abs(dy) > touchSlop && abs(dy) > abs(dx)) {
                         edgeDownEvent?.recycle()
                         edgeDownEvent = null
                         return false
                     }
-                    if (kotlin.math.abs(dx) > touchSlop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                    if (abs(dx) > touchSlop && abs(dx) > abs(dy)) {
                         if (canScroll(this, false, dx.toInt(), ev.x.toInt(), ev.y.toInt())) {
                             return false
                         }
@@ -1119,13 +1121,13 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     private fun canScroll(v: View, checkV: Boolean, dx: Int, x: Int, y: Int): Boolean {
-        if (v is android.view.ViewGroup) {
+        if (v is ViewGroup) {
             val scrollX = v.scrollX
             val scrollY = v.scrollY
             val count = v.childCount
             for (i in count - 1 downTo 0) {
                 val child = v.getChildAt(i)
-                if (child.visibility != View.VISIBLE) continue
+                if (child.visibility != VISIBLE) continue
                 if (x + scrollX >= child.left && x + scrollX < child.right &&
                     y + scrollY >= child.top && y + scrollY < child.bottom
                 ) {

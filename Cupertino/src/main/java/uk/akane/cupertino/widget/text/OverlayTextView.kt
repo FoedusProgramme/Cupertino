@@ -1,12 +1,16 @@
-package uk.akane.cupertino.widget
+package uk.akane.cupertino.widget.text
 
 import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.getViewLayer
+import uk.akane.cupertino.widget.getOverlayLayerColor
+import uk.akane.cupertino.widget.getShadeLayerColor
 import java.lang.reflect.Field
 
 class OverlayTextView @JvmOverloads constructor(
@@ -15,7 +19,7 @@ class OverlayTextView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : AppCompatTextView(context, attrs, defStyleAttr) {
 
-    var textViewLayer: Int = 0
+    var viewLayer: Int = 0
         set(value) {
             field = value
             invalidate()
@@ -31,7 +35,7 @@ class OverlayTextView @JvmOverloads constructor(
             0, 0
         ).apply {
             try {
-                textViewLayer = getInt(R.styleable.OverlayTextView_textViewLayer, 0)
+                viewLayer = getViewLayer(R.styleable.OverlayTextView_viewLayer, 0)
             } finally {
                 recycle()
             }
@@ -94,7 +98,7 @@ class OverlayTextView @JvmOverloads constructor(
         updateFallbackLineSpacing()
     }
 
-    override fun setTypeface(tf: android.graphics.Typeface?) {
+    override fun setTypeface(tf: Typeface?) {
         super.setTypeface(tf)
         updateFallbackLineSpacing()
     }
@@ -115,16 +119,16 @@ class OverlayTextView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         if (isInEditMode) {
-            setTextColor(resources.getShadeLayerColor(textViewLayer))
+            setTextColor(resources.getShadeLayerColor(viewLayer))
             super.onDraw(canvas)
             return
         }
         paint.blendMode = BlendMode.OVERLAY
-        textColorField.set(this, resources.getOverlayLayerColor(textViewLayer))
+        textColorField.set(this, resources.getOverlayLayerColor(viewLayer))
         super.onDraw(canvas)
 
         paint.blendMode = null
-        textColorField.set(this, resources.getShadeLayerColor(textViewLayer))
+        textColorField.set(this, resources.getShadeLayerColor(viewLayer))
         super.onDraw(canvas)
     }
 

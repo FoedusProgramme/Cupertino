@@ -12,20 +12,9 @@
         <enum name="tertiary" value="2" />
         <enum name="standard" value="3" />
     </attr>
-    <attr name="imageViewLayer" format="enum">
-        <enum name="primary" value="0" />
-        <enum name="secondary" value="1" />
-        <enum name="tertiary" value="2" />
-        <enum name="standard" value="3" />
-    </attr>
 
     <declare-styleable name="OverlayTextView">
-        <attr name="textViewLayer" format="enum">
-            <enum name="primary" value="0" />
-            <enum name="secondary" value="1" />
-            <enum name="tertiary" value="2" />
-            <enum name="standard" value="3" />
-        </attr>
+        <attr name="viewLayer" />
     </declare-styleable>
 
     <declare-styleable name="OverlayButton">
@@ -63,7 +52,7 @@
     </declare-styleable>
 
     <declare-styleable name="OverlayMonochromeImageView">
-        <attr name="imageViewLayer" />
+        <attr name="viewLayer" />
     </declare-styleable>
 
     <declare-styleable name="SimpleImageView">

@@ -3,6 +3,7 @@ package uk.akane.cupertino.widget
 import android.animation.TimeInterpolator
 import android.content.Context
 import android.content.res.Resources
+import android.content.res.TypedArray
 import android.graphics.Bitmap
 import android.graphics.Path
 import android.graphics.RectF
@@ -10,7 +11,7 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentTransaction
 import uk.akane.cupertino.R
-import uk.akane.cupertino.widget.navigation.SwitcherPostponeFragment
+import uk.akane.cupertino.navigation.SwitcherPostponeFragment
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun Int.dpToPx(context: Context): Int =
@@ -193,4 +194,20 @@ fun View.fadInAnimation(
                 it()
             }
         }
+}
+
+inline fun <reified T : Enum<T>> TypedArray.getEnum(index: Int, default: T) =
+    getInt(index, -1).let { if (it >= 0) enumValues<T>()[it] else default
+}
+
+fun TypedArray.getViewLayer(index: Int, default: Int = 0): Int {
+    return runCatching { getInt(index, default) }.getOrElse {
+        when (getString(index)) {
+            "primary" -> 0
+            "secondary" -> 1
+            "tertiary" -> 2
+            "standard" -> 3
+            else -> default
+        }
+    }
 }

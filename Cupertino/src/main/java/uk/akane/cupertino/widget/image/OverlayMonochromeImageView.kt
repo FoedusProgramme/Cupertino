@@ -4,15 +4,13 @@ import android.content.Context
 import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.core.content.withStyledAttributes
 import uk.akane.cupertino.R
+import uk.akane.cupertino.widget.getViewLayer
 import uk.akane.cupertino.widget.getOverlayLayerColor
 import uk.akane.cupertino.widget.getShadeLayerColor
-import uk.akane.cupertino.widget.utils.AnimationUtils
 
 class OverlayMonochromeImageView @JvmOverloads constructor(
     context: Context,
@@ -39,7 +37,7 @@ class OverlayMonochromeImageView @JvmOverloads constructor(
 
     init {
         context.withStyledAttributes(attrs, R.styleable.OverlayMonochromeImageView, defStyleAttr, 0) {
-            viewLayer = getInt(R.styleable.OverlayMonochromeImageView_imageViewLayer, 0)
+            viewLayer = getViewLayer(R.styleable.OverlayMonochromeImageView_viewLayer, 0)
         }
     }
 

@@ -1,4 +1,4 @@
-package uk.akane.cupertino.widget.popup
+package uk.akane.cupertino.popup
 
 import android.animation.ValueAnimator
 import android.content.Context
@@ -18,7 +18,7 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withSave
 import uk.akane.cupertino.R
-import uk.akane.cupertino.widget.utils.AnimationUtils
+import uk.akane.cupertino.utils.AnimationUtils
 
 private val Int.dp: Float
     get() = this * Resources.getSystem().displayMetrics.density
