@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
@@ -72,6 +73,9 @@ class BlendView @JvmOverloads constructor(
 
     init {
         inflate(context, R.layout.view_blend, this)
+
+        setBackgroundColor(Color.WHITE)
+
         imageViewTS = findViewById(R.id.type1)
         imageViewBE = findViewById(R.id.type3)
         imageViewBG = findViewById(R.id.bg)
