@@ -712,7 +712,10 @@ class FragmentSwitcherView @JvmOverloads constructor(
 
     private fun prepareBackGesture(): Boolean {
         if (animationLoadState == LoadState.ALREADY_LOADED) {
-            return currentAnimator?.isRunning != true
+            return currentAnimator?.isRunning != true &&
+                removeValueAnimator?.isRunning != true &&
+                addValueAnimator?.isRunning != true &&
+                !isAddingFragmentToStack
         }
         if (currentBaseFragment !in subFragmentStack.indices || subFragmentStack[currentBaseFragment].isEmpty()) {
             return false
@@ -782,7 +785,11 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     fun startPredictiveBack(): Boolean {
-        if (currentAnimator?.isRunning == true) {
+        if (currentAnimator?.isRunning == true ||
+            removeValueAnimator?.isRunning == true ||
+            addValueAnimator?.isRunning == true ||
+            isAddingFragmentToStack
+        ) {
             predictiveBackActive = false
             return false
         }
