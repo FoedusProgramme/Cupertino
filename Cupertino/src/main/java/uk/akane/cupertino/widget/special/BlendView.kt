@@ -7,7 +7,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BlendMode
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
@@ -50,8 +49,10 @@ class BlendView @JvmOverloads constructor(
     private val imageViewBE: ImageSwitcher
     private val imageViewBG: ImageSwitcher
     private val rotateFrame: ConstraintLayout
+    private val blurredFrame: ConstraintLayout
     private val overlayColor = ContextCompat.getColor(context, R.color.frontShadeColor)
     private var previousBitmap: Bitmap? = null
+    private var curveBitmap: Bitmap? = null
 
     private val overlayPaint = Paint().apply {
         blendMode = BlendMode.SOFT_LIGHT
@@ -71,17 +72,24 @@ class BlendView @JvmOverloads constructor(
 
     init {
         inflate(context, R.layout.view_blend, this)
-
-        setBackgroundColor(Color.WHITE)
-
         imageViewTS = findViewById(R.id.type1)
         imageViewBE = findViewById(R.id.type3)
         imageViewBG = findViewById(R.id.bg)
         rotateFrame = findViewById(R.id.rotate_frame)
+        blurredFrame = findViewById(R.id.blurredViews)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            curveBitmap =
+                BitmapFactory.decodeResource(
+                    resources,
+                    R.drawable.fg_blend_curving,
+                    BitmapFactory.Options().apply { inSampleSize = 16 })
+            postInvalidate()
+        }
 
         initializeImageSwitchers()
 
-        setRenderEffect(
+        blurredFrame.setRenderEffect(
             RenderEffect.createBlurEffect(FULL_BLUR_RADIUS, FULL_BLUR_RADIUS, Shader.TileMode.MIRROR)
         )
     }
@@ -114,6 +122,26 @@ class BlendView @JvmOverloads constructor(
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
         canvas.drawColor(overlayColor)
+        curveBitmap?.let { bmp ->
+            val viewWidth = width.toFloat()
+            val viewHeight = height.toFloat()
+
+            val bmpWidth = bmp.width.toFloat()
+            val bmpHeight = bmp.height.toFloat()
+
+            val scale = minOf(viewWidth / bmpWidth, viewHeight / bmpHeight)
+
+            val scaledWidth = bmpWidth * scale
+            val scaledHeight = bmpHeight * scale
+
+            val left = (viewWidth - scaledWidth) / 2f
+            val top = (viewHeight - scaledHeight) / 2f
+
+            val dstRect = RectF(left, top, left + scaledWidth, top + scaledHeight)
+
+            // TODO
+            // canvas.drawBitmap(bmp, null, dstRect, overlayPaint)
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -195,7 +223,7 @@ class BlendView @JvmOverloads constructor(
             addUpdateListener { animator ->
                 val radius = animator.animatedValue as Float
                 val renderEffect = RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.MIRROR)
-                post { setRenderEffect(renderEffect) }
+                post { blurredFrame.setRenderEffect(renderEffect) }
             }
             start()
         }
