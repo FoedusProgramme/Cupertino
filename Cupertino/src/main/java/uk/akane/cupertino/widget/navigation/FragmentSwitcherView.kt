@@ -711,7 +711,9 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     private fun prepareBackGesture(): Boolean {
-        if (animationLoadState == LoadState.ALREADY_LOADED) return true
+        if (animationLoadState == LoadState.ALREADY_LOADED) {
+            return currentAnimator?.isRunning != true
+        }
         if (currentBaseFragment !in subFragmentStack.indices || subFragmentStack[currentBaseFragment].isEmpty()) {
             return false
         }
@@ -780,26 +782,35 @@ class FragmentSwitcherView @JvmOverloads constructor(
     }
 
     fun startPredictiveBack(): Boolean {
+        if (currentAnimator?.isRunning == true) {
+            predictiveBackActive = false
+            return false
+        }
         predictiveBackActive = prepareBackGesture()
         return predictiveBackActive
     }
 
     fun updatePredictiveBack(progress: Float) {
-        if (!predictiveBackActive) return
+        if (!predictiveBackActive || currentAnimator?.isRunning == true) return
         val clamped = progress.coerceIn(0f, 1f)
         applyTranslation(width.toFloat() * clamped)
     }
 
     fun cancelPredictiveBack() {
+        if (!predictiveBackActive) {
+            return
+        }
         if (animationLoadState != LoadState.ALREADY_LOADED) {
             predictiveBackActive = false
             return
         }
+        predictiveBackActive = false
         animateBackTo(0f, finish = false)
     }
 
     fun commitPredictiveBack(): Boolean {
         if (!predictiveBackActive) return false
+        predictiveBackActive = false
         animateBackTo(width.toFloat(), finish = true)
         return true
     }
