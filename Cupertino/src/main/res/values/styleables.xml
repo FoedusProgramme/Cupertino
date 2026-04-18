@@ -6,6 +6,18 @@
     <attr name="cornerRadius" format="dimension" />
     <attr name="strokeWidth" format="dimension" />
     <attr name="strokeColor" format="color" />
+    <attr name="viewLayer" format="enum">
+        <enum name="primary" value="0" />
+        <enum name="secondary" value="1" />
+        <enum name="tertiary" value="2" />
+        <enum name="standard" value="3" />
+    </attr>
+    <attr name="imageViewLayer" format="enum">
+        <enum name="primary" value="0" />
+        <enum name="secondary" value="1" />
+        <enum name="tertiary" value="2" />
+        <enum name="standard" value="3" />
+    </attr>
 
     <declare-styleable name="OverlayTextView">
         <attr name="textViewLayer" format="enum">
@@ -17,12 +29,7 @@
     </declare-styleable>
 
     <declare-styleable name="OverlayButton">
-        <attr name="viewLayer" format="enum">
-            <enum name="primary" value="0" />
-            <enum name="secondary" value="1" />
-            <enum name="tertiary" value="2" />
-            <enum name="standard" value="3" />
-        </attr>
+        <attr name="viewLayer" />
         <attr name="icon" />
         <attr name="iconSize" />
     </declare-styleable>
@@ -53,6 +60,10 @@
     <declare-styleable name="OverlayHintView">
         <attr name="icon" />
         <attr name="iconSize" />
+    </declare-styleable>
+
+    <declare-styleable name="OverlayMonochromeImageView">
+        <attr name="imageViewLayer" />
     </declare-styleable>
 
     <declare-styleable name="SimpleImageView">
