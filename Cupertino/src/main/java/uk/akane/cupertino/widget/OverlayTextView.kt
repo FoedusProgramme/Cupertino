@@ -41,6 +41,7 @@ class OverlayTextView @JvmOverloads constructor(
         textColorField.isAccessible = true
 
         isSingleLine = true
+        updateFallbackLineSpacing()
     }
 
     private fun resolveTextColorField(): Field {
@@ -64,6 +65,52 @@ class OverlayTextView @JvmOverloads constructor(
         if (isInEditMode) return false
         val contextName = context.javaClass.name
         return !contextName.contains("BridgeContext", ignoreCase = true)
+    }
+
+    private fun containsCjk(text: CharSequence?): Boolean {
+        if (text.isNullOrEmpty()) {
+            return false
+        }
+
+        var index = 0
+        while (index < text.length) {
+            val current = text[index]
+            if (current.code < 0x80) {
+                index++
+                continue
+            }
+
+            val codePoint = Character.codePointAt(text, index)
+            if (isCjkScript(codePoint)) {
+                return true
+            }
+            index += Character.charCount(codePoint)
+        }
+        return false
+    }
+
+    override fun onTextChanged(text: CharSequence?, start: Int, lengthBefore: Int, lengthAfter: Int) {
+        super.onTextChanged(text, start, lengthBefore, lengthAfter)
+        updateFallbackLineSpacing()
+    }
+
+    override fun setTypeface(tf: android.graphics.Typeface?) {
+        super.setTypeface(tf)
+        updateFallbackLineSpacing()
+    }
+
+    private fun updateFallbackLineSpacing() {
+        setFallbackLineSpacing(!containsCjk(text))
+    }
+
+    private fun isCjkScript(codePoint: Int): Boolean {
+        return when (Character.UnicodeScript.of(codePoint)) {
+            Character.UnicodeScript.HAN,
+            Character.UnicodeScript.HIRAGANA,
+            Character.UnicodeScript.KATAKANA,
+            Character.UnicodeScript.HANGUL -> true
+            else -> false
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
