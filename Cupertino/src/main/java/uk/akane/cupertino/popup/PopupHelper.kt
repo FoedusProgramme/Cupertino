@@ -354,7 +354,11 @@ class PopupHelper(
                     (popupTop - popupInitialLocationY + popupHeight).toInt()
                 },
                 popupWidth.toInt(),
-                popupHeight.toInt(),
+                if (popupAnchorFromTop) {
+                    (popupBottom - popupInitialLocationY).toInt()
+                } else {
+                    popupHeight.toInt()
+                },
                 popupRadius)
         }
     }
