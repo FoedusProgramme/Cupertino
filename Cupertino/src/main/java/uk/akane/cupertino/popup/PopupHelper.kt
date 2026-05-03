@@ -224,7 +224,7 @@ class PopupHelper(
         }
 
         if (!isRetract) {
-            popupInitialLocationX = locationX + 16.dp.toInt()
+            popupInitialLocationX = locationX + 12.dp.toInt()
             popupInitialLocationY = locationY - 12.dp.toInt()
             popupAnchorFromTop = anchorFromTop
             popupBackgroundRenderNode = backgroundRenderNode
