@@ -64,14 +64,13 @@ class BottomSheetStackController(
         if (containerStack.size == 1) {
             callbacks.onHideUnderlay()
         }
-        containerStack.lastOrNull()?.let { previousId ->
-            animateContainerScale(previousId, config.stackedSheetScale)
-        }
+        val previousId = containerStack.lastOrNull()
         insertContainer(
             fragment,
             affectBackground = false,
             showAnimationDuration = null,
-            hideAnimationDuration = hideAnimationDuration
+            hideAnimationDuration = hideAnimationDuration,
+            scaleDownContainerId = previousId
         )
     }
 
@@ -124,7 +123,8 @@ class BottomSheetStackController(
         fragment: Fragment,
         affectBackground: Boolean,
         showAnimationDuration: Long?,
-        hideAnimationDuration: Long?
+        hideAnimationDuration: Long?,
+        scaleDownContainerId: Int? = null
     ) {
         val container = FragmentContainerView(activity).apply {
             id = View.generateViewId()
@@ -160,6 +160,7 @@ class BottomSheetStackController(
 
                     containerCardView.post {
                         containerCardView.visibility = View.VISIBLE
+                        scaleDownContainerId?.let { animateContainerScale(it, config.stackedSheetScale) }
                         AnimationUtils.createValAnimator<Float>(
                             containerCardView.translationY,
                             0F,
@@ -208,7 +209,15 @@ class BottomSheetStackController(
         if (isStacked && containerStack.size == 2) {
             callbacks.onShowUnderlayAnimated()
         }
-        previousContainerId?.let { animateContainerScale(it, 1f) }
+
+        val previousCardView = previousContainerId?.let { prevId ->
+            val prevContainer = rootView.findViewById<FragmentContainerView>(prevId)
+            prevContainer?.findViewById<MaterialCardView>(config.rootCardViewId)
+        }
+        val prevStartScale = previousCardView?.scaleX ?: 1f
+        val prevStartTranslation = previousCardView?.translationY ?: 0f
+        val prevStartAlpha = previousCardView?.alpha ?: 1f
+        val prevTopMargin = (previousCardView?.layoutParams as? MarginLayoutParams)?.topMargin ?: 0
 
         AnimationUtils.createValAnimator<Float>(
             0F,
@@ -249,12 +258,20 @@ class BottomSheetStackController(
             }
         ) { animatedValue ->
             containerCardView.translationY = animatedValue
+            val fraction = (animatedValue / screenHeight).coerceIn(0f, 1f)
             if (isStacked) {
-                val fraction = (animatedValue / screenHeight).coerceIn(0f, 1f)
                 containerCardView.alpha = lerp(startAlpha, endAlpha, fraction)
+                previousCardView?.let { pv ->
+                    val scale = lerp(prevStartScale, 1f, fraction)
+                    pv.scaleX = scale
+                    pv.scaleY = scale
+                    pv.translationY = lerp(prevStartTranslation, 0f, fraction)
+                    val t = ((1f - scale) / (1f - config.stackedSheetScale)).coerceIn(0f, 1f)
+                    pv.alpha = lerp(1f, 0.5f, t)
+                }
             }
             if (affectBackground) {
-                callbacks.onBackgroundProgress(1f - animatedValue / screenHeight)
+                callbacks.onBackgroundProgress(1f - fraction)
             }
         }
     }
