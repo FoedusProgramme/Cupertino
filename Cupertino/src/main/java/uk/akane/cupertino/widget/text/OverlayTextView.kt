@@ -19,6 +19,8 @@ class OverlayTextView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : AppCompatTextView(context, attrs, defStyleAttr) {
 
+    override fun hasOverlappingRendering() = false
+
     var viewLayer: Int = 0
         set(value) {
             field = value

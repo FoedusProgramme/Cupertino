@@ -19,6 +19,8 @@ class OverlayHintView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    override fun hasOverlappingRendering() = false
+
     private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         xfermode = AnimationUtils.overlayXfermode
     }

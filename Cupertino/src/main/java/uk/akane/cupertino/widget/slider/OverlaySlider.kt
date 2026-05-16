@@ -31,6 +31,8 @@ class OverlaySlider @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr),
     GestureDetector.OnGestureListener {
 
+    override fun hasOverlappingRendering() = false
+
     private var gestureDetector = GestureDetector(context, this)
 
     private var transformValueAnimator: ValueAnimator? = null

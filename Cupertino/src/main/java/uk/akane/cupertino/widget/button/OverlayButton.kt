@@ -31,6 +31,8 @@ class OverlayButton @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr), Checkable {
 
+    override fun hasOverlappingRendering() = false
+
     var viewLayer: Int = 0
         set(value) {
             field = value

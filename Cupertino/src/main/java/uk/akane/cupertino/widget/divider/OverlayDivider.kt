@@ -17,6 +17,8 @@ class OverlayDivider @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    override fun hasOverlappingRendering() = false
+
     private val paint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = resources.getColor(R.color.secondaryOverlayColor, null)
         style = Paint.Style.FILL

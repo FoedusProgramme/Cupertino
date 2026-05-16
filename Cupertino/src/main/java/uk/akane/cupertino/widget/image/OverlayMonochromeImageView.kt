@@ -18,6 +18,8 @@ class OverlayMonochromeImageView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : AppCompatImageView(context, attrs, defStyleAttr) {
 
+    override fun hasOverlappingRendering() = false
+
     private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         blendMode = BlendMode.OVERLAY
         isFilterBitmap = true

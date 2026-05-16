@@ -28,6 +28,8 @@ class OverlayBackgroundButton @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : ShrinkableView(context, attrs, defStyleAttr), Checkable {
 
+    override fun hasOverlappingRendering() = false
+
     private var isChecked = false
     private var iconSize: Int = 28.dpToPx(context)
     private var drawableBitmap: Bitmap? = null
