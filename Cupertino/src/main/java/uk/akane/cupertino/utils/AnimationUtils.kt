@@ -6,6 +6,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.os.Build
 import android.view.Choreographer
+import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.Animation
@@ -17,6 +18,7 @@ import androidx.core.animation.doOnCancel
 import androidx.core.animation.doOnEnd
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
+import uk.akane.cupertino.widget.lerp
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
@@ -79,6 +81,62 @@ object AnimationUtils {
             if (startInstant) {
                 start()
             }
+        }
+    }
+
+    /**
+     * Creates an Apple Music-style scale swap animator between two views.
+     *
+     * The outgoing view scales down and fades out (first half),
+     * then the incoming view scales up and fades in (second half).
+     * Toolbar/controls remain static.
+     *
+     * @param outView The view to animate out (shrinks away).
+     * @param inView The view to animate in (grows back).
+     * @param duration Total animation duration for both phases.
+     * @param minScale The scale at which views appear "gone" (default 0.88).
+     * @param outAlpha Lambda called with outgoing view alpha (1→0).
+     * @param inAlpha Lambda called with incoming view alpha (0→1).
+     * @param doOnEnd Called when the full animation completes.
+     */
+    fun createScaleSwapAnimator(
+        outView: View,
+        inView: View,
+        duration: Long = MID_DURATION,
+        minScale: Float = 0.88f,
+        interpolator: TimeInterpolator = easingStandardInterpolator,
+        outAlpha: ((Float) -> Unit)? = null,
+        inAlpha: ((Float) -> Unit)? = null,
+        doOnEnd: () -> Unit = {},
+    ): ValueAnimator {
+        // When caller handles alpha via lambdas, keep the view itself fully opaque
+        inView.alpha = if (inAlpha != null) 1f else 0f
+        inView.scaleX = minScale
+        inView.scaleY = minScale
+        return createValAnimator(
+            0f, 1f,
+            duration = duration,
+            interpolator = interpolator,
+            doOnEnd = {
+                outView.scaleX = 1f
+                outView.scaleY = 1f
+                doOnEnd()
+            }
+        ) { fraction ->
+            // Phase 1 (0→0.5): outView shrinks + fades out
+            val outFraction = ((fraction * 2f).coerceIn(0f, 1f))
+            // Phase 2 (0.5→1): inView grows + fades in
+            val inFraction = (((fraction - 0.5f) * 2f).coerceIn(0f, 1f))
+
+            val outScale = lerp(1f, minScale, outFraction)
+            outView.scaleX = outScale
+            outView.scaleY = outScale
+            outAlpha?.invoke(1f - outFraction) ?: run { outView.alpha = 1f - outFraction }
+
+            val inScale = lerp(minScale, 1f, inFraction)
+            inView.scaleX = inScale
+            inView.scaleY = inScale
+            inAlpha?.invoke(inFraction) ?: run { inView.alpha = inFraction }
         }
     }
 
